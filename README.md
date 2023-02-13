@@ -4,6 +4,8 @@
 <br>
 
 CableOrca is being developed to be a High-level packet sniffer that is approachable to users of all skill levels.
+<br><br>
+Status: Early access
 
 # Core Technologies
 
