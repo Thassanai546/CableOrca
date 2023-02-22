@@ -1,11 +1,10 @@
-from net_interfaces import *
-from file_manager import *
 from scapy.all import *
 from scapy.all import IP
 import tkinter as tk
 
-# Start packet analysis
-# Packet output formats
+from gui_engine import create_pcap_saver_frame
+from net_interfaces import *
+from file_manager import *
 
 
 class SnifferWindow(tk.Frame):
@@ -15,12 +14,14 @@ class SnifferWindow(tk.Frame):
 
         # Packet view frame allows a "save" button
         # to be placed underneath the packet view window.
-        # Without a frame the button would get placed beside it.
+        # Without building a new frame, the button would get placed beside it.
         self.packet_view_frame = tk.Frame(self)
         self.packet_view_frame.pack()
 
-        # Building a text field with a vertical scrollbar.
-        self.packet_field = tk.Text(self.packet_view_frame, height=14, width=115, font=(
+        # Building the live packet output display
+        # It uses consolas font. Note that changing font affects width and height
+        # values of the live packet output field.
+        self.packet_field = tk.Text(self.packet_view_frame, height=17, width=125, font=(
             "consolas", 10), pady=10)  # WIDTH and HEIGHT set here
         self.packet_field.pack(side=tk.LEFT)
 
@@ -30,8 +31,9 @@ class SnifferWindow(tk.Frame):
 
         self.packet_field.config(yscrollcommand=self.scrollbar.set)
 
-        # Add a "Stop" button to the GUI
-        self.stop_button = tk.Button(self, text="Stop Analysis", command=self.stop_sniffing, width=20, bg="red", font=("Calibri",11))
+        # Add a "Stop" button to the GUI, to stop network analysis.
+        self.stop_button = tk.Button(
+            self, text="Stop Analysis", command=self.stop_sniffing, width=20, bg="red", font=("Calibri", 11))
         self.stop_button.pack(pady=10)
 
         # Duration and interface from "def init"
@@ -39,7 +41,7 @@ class SnifferWindow(tk.Frame):
         self.interface = interface
 
         # All Interfaces = "None" as an interface for scapy sniff() function.
-        if (self.interface == "All Interfaces."):
+        if self.interface == "All Interfaces.":
             self.interface = interface = None  # None sniffs all interfaces in scapy sniff()
 
         # Starting a new thread as scapy sniff() blocks execution until
@@ -47,14 +49,15 @@ class SnifferWindow(tk.Frame):
         # Live output of packets requires the use of a thread
         # so that GUI remains active.
         self.stop_sniff = threading.Event()
-        self.sniff_thread = threading.Thread(target=self.initiate_sniffer )
+        self.sniff_thread = threading.Thread(target=self.initiate_sniffer)
         self.sniff_thread.start()
         # Note Python will clean up once thread process is complete.
 
     def stop_sniffing(self):
+        # Used to terminate sniffing thread
         self.stop_sniff.set()
 
-    def initiate_sniffer (self):
+    def initiate_sniffer(self):
         # This def defines "display_packet", which appends output to a field on the gui
         # and call the sniff fucntion with "display_packet" as prn.
         # in the sniff function, prn is done for every packet captured.
@@ -65,18 +68,20 @@ class SnifferWindow(tk.Frame):
             self.packet_field.see('end')
 
         try:
-            #pkts = sniff(iface=self.interface, prn=display_packet, store=True, timeout=self.duration)
+            # pkts = sniff(iface=self.interface, prn=display_packet, store=True, timeout=self.duration)
 
             # iface = interface, prn = processing done for each packet, timeout = duration of analysis,
             # store = true grants ability to save capture to a .pcap file
             # stop_filter = stop thread that is running sniff function. Stopping sniff jumps to "create_pcap_saver_frame".
-            pkts = sniff(iface=self.interface, prn=display_packet, store=True, timeout=self.duration, stop_filter=lambda p: self.stop_sniff.is_set())
-            self.packet_field.config(state="disabled") # Prevent the user from accidently typing in to the packet output field.
+            pkts = sniff(iface=self.interface, prn=display_packet, store=True,
+                         timeout=self.duration, stop_filter=lambda p: self.stop_sniff.is_set())
+            # Prevent the user from accidently typing in to the packet output field.
+            self.packet_field.config(state="disabled")
             self.stop_button.config(state="disabled", bg="grey")
-            print("Sniffing complete")
+            # print("Sniffing complete")
 
             # call file_manager saving functions:
-            create_pcap_saver_frame(self, pkts) # file_manager.py
+            create_pcap_saver_frame(self, pkts)  # file_manager.py
         except Exception as ex:
             self.packet_field.insert(tk.END, ex)
             self.packet_field.update_idletasks()
@@ -155,9 +160,11 @@ def sniff_with(function):
         print("Invalid interface, choose an ID from the list above")
 
 
+# Packet parsing and output formats.
+
 def handler(packet):
     # Packet summary for each captured packet.
-    return (packet.summary())
+    return packet.summary()
 
 
 def clean(packet):
@@ -170,4 +177,5 @@ def clean(packet):
         protocol = packet[IP].proto
         return (f'Time: {packet.time}\nSource MAC: {src_mac}\nDestination MAC: {dst_mac}\nSource IP: {src_ip}\nDestination IP: {dst_ip}\nProtocol: {protocol}\n')
     except:
-        pass
+        # If we fail to parse a packet, don't attempt to display that packet.
+        return ("")

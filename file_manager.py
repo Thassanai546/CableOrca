@@ -23,31 +23,17 @@ def save_to_pcap(pkts):
     # Uses filedialog to save to system.
     # Only pcap files are allowed.
     # pkts must be provded for wrcap function!
-    save_window = tk.Tk()
-    save_window.withdraw()
-    file_path = filedialog.asksaveasfilename(
-        defaultextension=".pcap", filetypes=[("PCAP files", "*.pcap")])
-    if file_path:
-        wrpcap(file_path, pkts)
-        print(f"PCAP file saved to: {file_path}")
-
-
-def create_pcap_saver_frame(parent, pkts):
-    # This spawns a button that a user can use to save the captured packets
-    # after network analysis.
-
-    # Uses save_to_pcap(pkts)
-    gui_save_frame = tk.Frame(parent)
-    gui_save_frame.pack()
-
-    tk.Label(gui_save_frame, text="Packet Sniffiing Complete.", font=("Calibri",13), pady=10).pack()
-
     try:
-        save_button = tk.Button(gui_save_frame, text="Click here to save file", command=lambda: save_to_pcap(pkts), width=20, font=("Calibri",11), bg="white")
-        save_button.pack(pady=10)
-    except Exception as exp:
-        print(exp)
-        tk.Label(gui_save_frame, text=exp, font=("Calibri",8)).pack()
+        save_window = tk.Tk()
+        save_window.withdraw()
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".pcap", filetypes=[("PCAP files", "*.pcap")])
+        if file_path:
+            wrpcap(file_path, pkts)
+            print(f"PCAP file saved to: {file_path}")
+    except Exception as ex:
+        print(ex)
+        pass
 
 
 def open_pcap():
@@ -183,7 +169,8 @@ def download_to_cableorca(url):
             return 1
 
         downloaded = requests.get(url)
-        with open(file_path, "wb") as specified_folder: # "wb" = write in binary mode.
+        # "wb" = write in binary mode.
+        with open(file_path, "wb") as specified_folder:
             specified_folder.write(downloaded.content)
         print(f"{file_path} has been downloaded to {CableOrcaDirectory}.")
         return 1
@@ -191,20 +178,47 @@ def download_to_cableorca(url):
         print("Could not download that file..")
         return 0
 
+
 def save_image(url):
     # This function is different to download_to_cableorca due to the fact that
     # It allows a user to choose the destination of the image downloaded.
+    # Returns True or False.
 
     # Open a file dialog to select the image file
     try:
-        file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG", "*.png"), ("JPEG", "*.jpg"), ("All Files", "*.*")])
+        file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[
+                                                 ("PNG", "*.png"), ("JPEG", "*.jpg"), ("All Files", "*.*")])
 
         if file_path:
             # Get speedtest.results() image from online.
             downloaded = requests.get(url)
-            with open(file_path, "wb") as specified_folder: # "wb" = write in binary mode.
+            # "wb" = write in binary mode.
+            with open(file_path, "wb") as specified_folder:
                 specified_folder.write(downloaded.content)
             return 1
     except:
         print("Could not download that file..")
         return 0
+
+
+def read_pcap():
+    try:
+        # Prompt user to select .pcap file
+        # Pass that pcap file to "rdpcap()"
+        # Return false if nothing selected.
+        pcap_file = tk.filedialog.askopenfilename(
+            filetypes=[("PCAP files", "*.pcap")])
+
+        if not pcap_file:
+            return False  # User clicked "Cancel" or didn't select a file
+
+        # rdpcap returns a python LIST of packets
+        readable_packets = rdpcap(pcap_file)
+        return pcap_file, readable_packets
+
+    except FileNotFoundError:
+        print("Error: File not found")
+        return False
+    except Scapy_Exception:
+        print("Error: Could not read pcap file")
+        return False

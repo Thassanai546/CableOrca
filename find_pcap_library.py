@@ -21,9 +21,10 @@ def find_pcap_lib():
 
     return has_library
 
+
 def open_browser(url):
     try:
         webbrowser.open_new(url)
-    except:
+    except Exception as ex:
         print("Could not open browser.")
-        pass
+        print(ex)

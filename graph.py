@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 
 
 def build_pc(labels, sizes):
+    # pie chart
     try:
         if len(labels) != len(sizes):
             print("Error: The number of labels and sizes must be equal")
@@ -16,6 +17,7 @@ def build_pc(labels, sizes):
 
 
 def build_bc(labels, sizes):
+    # bar chart
     try:
         if len(labels) != len(sizes):
             print("Error: The number of labels and sizes must be equal")

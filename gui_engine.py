@@ -1,4 +1,5 @@
 import tkinter as tk
+from file_manager import save_to_pcap
 
 
 class ScrollableFrame(tk.Frame):
@@ -19,7 +20,8 @@ class ScrollableFrame(tk.Frame):
         self.frame = tk.Frame(self.canvas)
 
         # vertical scrollbar. It's command is to scroll canvas y view
-        self.vsb = tk.Scrollbar(self, orient="vertical",command=self.canvas.yview)
+        self.vsb = tk.Scrollbar(self, orient="vertical",
+                                command=self.canvas.yview)
         self.canvas.configure(yscrollcommand=self.vsb.set)
 
         # scroll bar is on the right side of canvas.
@@ -30,12 +32,19 @@ class ScrollableFrame(tk.Frame):
         # Window in canvas
         # 4,4 = position of window on canvas.
         # tag can be used to refer to this window later, for example if it needs to be hidden.
-        self.canvas.create_window((4, 4), window=self.frame, anchor="nw",tags="self.frame")
+        self.canvas.create_window(
+            (4, 4), window=self.frame, anchor="nw", tags="self.frame")
 
+        # The <Configure> event is triggered whenever the size or position of the widget changes.
         self.frame.bind("<Configure>", self.on_frame_configure)
 
+    # on_frame_configure, being part of the scrollableFrame class
+    # Requires the "self" argument.
+    # Instance methods should take self as a first parameter argument.
+    # Doing this allows the method to access instance variable + methods of the class
     def on_frame_configure(self, event):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
 
 def create_scrollable_radiobuttons(parent, items):
     # Takes a parent and a list.
@@ -46,11 +55,12 @@ def create_scrollable_radiobuttons(parent, items):
             raise ValueError("The 'items' list cannot be empty")
 
         # eg. width = 400, height = 200
-        frame = ScrollableFrame(parent, 450, 200)
+        frame = ScrollableFrame(parent, 590, 300)
         variable = tk.StringVar()
 
         for item in items:
-            current_button = tk.Radiobutton(frame.frame, text=item, font=("Arial", 11), variable=variable, value=item)
+            current_button = tk.Radiobutton(frame.frame, text=item, font=(
+                "Arial", 11), variable=variable, value=item)
             current_button.pack(anchor='w')
 
         frame.pack()
@@ -58,3 +68,24 @@ def create_scrollable_radiobuttons(parent, items):
 
     except Exception as exc:
         print(str(exc))
+
+
+def create_pcap_saver_frame(parent, pkts):
+    # This spawns a button that a user can use to save the captured packets
+    # after network analysis.
+
+    # Uses save_to_pcap(pkts)
+    gui_save_frame = tk.Frame(parent)
+    gui_save_frame.pack()
+
+    tk.Label(gui_save_frame, text="Packet Sniffing Complete.",
+             font=("Calibri", 13), pady=5).pack()
+
+    try:
+        # save_to_pcap function from file_manager.py used.
+        save_button = tk.Button(gui_save_frame, text="Click here to save file", command=lambda: save_to_pcap(
+            pkts), width=20, font=("Calibri", 11), bg="white")
+        save_button.pack(pady=10)
+    except Exception as exp:
+        print(exp)
+        tk.Label(gui_save_frame, text=exp, font=("Calibri", 8)).pack(pady=10)

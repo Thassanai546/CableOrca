@@ -1,12 +1,38 @@
-from file_manager import open_pcap
 from collections import Counter
 from ipwhois import IPWhois
-#from graph import *
-from scapy.all import *
 from scapy.all import IP
+from scapy.all import *
+import tkinter as tk
+from graph import *
+
+from file_manager import *
+
 
 # Resolve IP addresses using socket and WHOIS.
 # Check if addresses are private.
+
+
+class ReaderWindow(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.pack()
+
+        self.packet_read_frame = tk.Frame(self)
+        self.packet_read_frame.pack()
+
+        self.packet_field = tk.Text(self.packet_read_frame, height=17, width=125, font=(
+            "consolas", 10), pady=10)  # WIDTH and HEIGHT set here
+        self.packet_field.pack(side=tk.LEFT)
+
+        self.scrollbar = tk.Scrollbar(
+            self.packet_read_frame, command=self.packet_field.yview)
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.packet_field.config(yscrollcommand=self.scrollbar.set)
+
+        self.stop_button = tk.Button(
+            self, text="Stop Reading", command="", width=20, bg="red", font=("Calibri", 11))
+        self.stop_button.pack(pady=10)
 
 
 def is_private_ip(ip_address):
@@ -104,6 +130,7 @@ def display_pcap_composition():
 
         # Display graphs
         build_bc(ips_from_counter, percentages_from_counter)
+        build_pc(ips_from_counter, percentages_from_counter)
 
     except:
         print("Error, could not analyse .pcap composition.")
