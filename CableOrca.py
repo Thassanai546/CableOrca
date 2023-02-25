@@ -1,7 +1,7 @@
 from PIL import Image, ImageTk
 import tkinter as tk
 
-from find_pcap_library import *
+from windows_library_check import *
 from net_interfaces import *
 from net_speed_test import *
 from sniffer_engine import *
@@ -146,13 +146,13 @@ class Window1(tk.Frame):
         # If it is not found, links npcap download page.
         # Note! It is important to leave space on the homepage for this warning!
         try:
-            if library_check is False:
-                # Returns true if "wpcap.dll" library found.
-                HAS_PCAP_LIBR = find_pcap_lib()
+            if LIBRARY_CHECK is False:
+                # Search for a specified dll on the system.
+                HAS_PCAP_LIBR = check_dll("wpcap.dll")
                 print("System was searched for a pcap library.")
 
             if HAS_PCAP_LIBR:
-                library_check = True  # System has been checked for wpcap.dll
+                LIBRARY_CHECK = True  # System has been checked for wpcap.dll
                 message = tk.Label(
                     self, justify="left", text="The required PCAP library has been detected on your system. The application is now ready to run.", fg="#2fc76d", font=(home_font, 14))
                 message.pack()
@@ -332,12 +332,9 @@ class Window4(tk.Frame):
             self, text="Please select a PCAP file to read.", font=(pcap_analysis_font, 14))
         heading.pack()
 
-        self.select_file_btn = tk.Button(self, text="Select File", width=15,
-                                         command="", font=(pcap_analysis_font, 12), bg="#58d68d")
-        self.select_file_btn.pack(pady=5)
-
         # Persistant window, displayed before reading starts.
         try:
+            # This spawns a text area.
             ReaderWindow(self)
         except Exception as ex:
             print(ex)
@@ -364,11 +361,11 @@ class Window5(tk.Frame):
 
         # If we have a public IP address, display it to gui.
         if PUBLIC_IP:
-            pa_output = "This is your public IP address: "
-            pa_output += PUBLIC_IP
+            public_ip_output = "This is your public IP address: "
+            public_ip_output += PUBLIC_IP
 
             self.public_ip_label = tk.Label(
-                self, text=pa_output, justify="left", font=(speed_test_font, 13))
+                self, text=public_ip_output, justify="left", font=(speed_test_font, 13))
             self.public_ip_label.pack()
 
         # This is the label that will show the results of the network speed test.

@@ -60,7 +60,7 @@ def get_current_device():
             f"Your address: {device_ip}\nYour device name: {device_name}\nYour network interface: {device_interface}")
         # print(socket.gethostbyaddr(get_if_addr(conf.iface))[0])
     except:
-        output = ("Could not get device info.")
+        output = "Could not get device info."
     return output
 
 
@@ -76,11 +76,11 @@ def get_public_ip():
 
 def check_internet():
     # Use requests library to test for internet connection
-    servers = ['https://www.google.com',
-               'https://www.bing.com', 'https://github.com/']
+    servers = ['https://www.google.com','https://www.bing.com', 'https://github.com/']
+    
     for server in servers:
         try:
-            response = requests.get(server, timeout=5)
+            requests.get(server, timeout=5)
             return True
         except requests.exceptions.RequestException:
             # If we can't connect to google, try others.

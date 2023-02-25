@@ -1,5 +1,6 @@
 import ctypes
 import webbrowser
+import subprocess
 
 '''
 ctypes allows calling functions in DLLs or shared libraries.
@@ -10,10 +11,10 @@ Npcap is recommended.
 '''
 
 
-def find_pcap_lib():
+def check_dll(dll_name):
     try:
         #  According to https://npcap.com/guide/npcap-api.html , the Npcap API is exported by wpcap.dll"
-        ctypes.WinDLL("wpcap.dll")
+        ctypes.WinDLL(dll_name) # wpcap.dll
         has_library = True
         print("Npcap/Winpcap detected!")
     except OSError:

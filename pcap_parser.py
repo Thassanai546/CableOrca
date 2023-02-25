@@ -4,12 +4,9 @@ from scapy.all import IP
 from scapy.all import *
 import tkinter as tk
 from graph import *
+import threading
 
 from file_manager import *
-
-
-# Resolve IP addresses using socket and WHOIS.
-# Check if addresses are private.
 
 
 class ReaderWindow(tk.Frame):
@@ -17,6 +14,14 @@ class ReaderWindow(tk.Frame):
         super().__init__(parent)
         self.pack()
 
+        pcap_reading_window_font = "Calibri"
+
+        # Select file button
+        self.select_file_btn = tk.Button(self, text="Select File", width=15,
+                                         command=self.select_file_clicked, font=(pcap_reading_window_font, 12), bg="#58d68d")
+        self.select_file_btn.pack(pady=5)
+
+        # Packet view frame
         self.packet_read_frame = tk.Frame(self)
         self.packet_read_frame.pack()
 
@@ -30,9 +35,50 @@ class ReaderWindow(tk.Frame):
 
         self.packet_field.config(yscrollcommand=self.scrollbar.set)
 
+        # Stop reading button
         self.stop_button = tk.Button(
-            self, text="Stop Reading", command="", width=20, bg="red", font=("Calibri", 11))
+            self, text="Stop Reading", command=self.stop_reading_thread, width=20, bg="red", font=(pcap_reading_window_font, 11))
         self.stop_button.pack(pady=10)
+
+    def select_file_clicked(self):
+        # Select file button clicked.
+
+        # read_pcap uses rdpcap(file) and returns a list of packets.
+        self.filenamme, self.packet_list = read_pcap()
+
+        # Clicking stop disables the stop button.
+        # Re-enable for new file reading process.
+        self.stop_button.config(state=tk.NORMAL)
+
+        self.read_file(self.packet_list)
+
+    def read_file(self, packet_list):
+        self.packet_field.delete("1.0", tk.END)
+        self.thread_stop = threading.Event()
+
+        # Note args=(), from the thread constructor expects a tuple of arguments.
+        # (packet_list,) = tuple with one element
+        # (packet_list) = single argument
+        # This is why ',' is needed.
+        read_thread = threading.Thread(
+            target=self.read_file_thread, args=(packet_list,))
+        read_thread.start()
+
+    def read_file_thread(self, packet_list):
+        for pkt in packet_list:
+            # Stop thread if stop button has been clicked
+            if self.thread_stop.is_set():
+                self.stop_button.config(state=tk.DISABLED)
+                break
+
+            # Stop button not clicked, print to packet field
+            self.packet_field.insert(tk.END, str(pkt))
+            self.packet_field.insert(tk.END, '\n')
+            self.packet_field.see(tk.END)
+
+    def stop_reading_thread(self):
+        # Called by "Stop Reading" button
+        self.thread_stop.set()
 
 
 def is_private_ip(ip_address):
