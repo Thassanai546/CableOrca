@@ -68,24 +68,3 @@ def create_scrollable_radiobuttons(parent, items):
 
     except Exception as exc:
         print(str(exc))
-
-
-def create_pcap_saver_frame(parent, pkts):
-    # This spawns a button that a user can use to save the captured packets
-    # after network analysis.
-
-    # Uses save_to_pcap(pkts)
-    gui_save_frame = tk.Frame(parent)
-    gui_save_frame.pack()
-
-    tk.Label(gui_save_frame, text="Packet Sniffing Complete.",
-             font=("Calibri", 13), pady=5).pack()
-
-    try:
-        # save_to_pcap function from file_manager.py used.
-        save_button = tk.Button(gui_save_frame, text="Click here to save file", command=lambda: save_to_pcap(
-            pkts), width=20, font=("Calibri", 11), bg="white")
-        save_button.pack(pady=10)
-    except Exception as exp:
-        print(exp)
-        tk.Label(gui_save_frame, text=exp, font=("Calibri", 8)).pack(pady=10)

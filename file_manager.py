@@ -22,18 +22,40 @@ def save_to_pcap(pkts):
     # Used by create_pcap_saver_frame
     # Uses filedialog to save to system.
     # Only pcap files are allowed.
-    # pkts must be provded for wrcap function!
+    # pkts must be provided for wrcap function!
     try:
-        save_window = tk.Tk()
-        save_window.withdraw()
         file_path = filedialog.asksaveasfilename(
             defaultextension=".pcap", filetypes=[("PCAP files", "*.pcap")])
         if file_path:
             wrpcap(file_path, pkts)
-            print(f"PCAP file saved to: {file_path}")
+            return True
+
     except Exception as ex:
+        print("File not saved!")
         print(ex)
-        pass
+        return False
+
+
+def save_txt_file(content):
+    # Uses filedialog to save to system.
+    # Saves file with .txt extension.
+    try:
+        # Show the file saving dialog and get the chosen file path
+        file_path = filedialog.asksaveasfilename(defaultextension=".txt")
+
+        # If the user cancels the file saving dialog, do nothing
+        if file_path:
+            # Open the file in write mode and write the output to it
+            with open(file_path, "w") as f:
+                f.write(content)
+                return True
+        else:
+            return False
+
+    except Exception as ex:
+        print("File not saved!")
+        print(ex)
+        return False
 
 
 def open_pcap():
@@ -95,30 +117,6 @@ def append(filename, pkts):
         print("An error occurred while saving/appending packets to the file:", e)
 
 
-def save_txt_file(data):
-    # Saves data to a text file. If user specified a file
-    # that exists already, data will be appended to the file.
-    try:
-        file_name = input("Enter the name of the file: ")
-
-        if not file_name.endswith('.txt'):
-            file_name += '.txt'
-
-        create_directory()
-
-        # add CableOrca directory to filename
-        file_path = os.path.join(CableOrcaDirectory, file_name)
-
-        mode = 'a' if os.path.exists(file_path) else 'w'
-
-        with open(file_path, mode) as text_file:
-            text_file.write(data)
-        print(f'Successfully wrote to {file_path}')
-
-    except Exception as e:
-        print(f'An error occurred while writing to the file: {e}')
-
-
 def open_and_read_pcap(function):  # To be bound with "socket_translator"
     # For each packet in a pcap file, this function will
     # pass that packet in to the function supplied.
@@ -166,17 +164,17 @@ def download_to_cableorca(url):
         file_path = os.path.join(CableOrcaDirectory, file_path)
         if os.path.exists(file_path):
             print(f"{file_path} already exists.")
-            return 1
+            return True
 
         downloaded = requests.get(url)
         # "wb" = write in binary mode.
         with open(file_path, "wb") as specified_folder:
             specified_folder.write(downloaded.content)
         print(f"{file_path} has been downloaded to {CableOrcaDirectory}.")
-        return 1
+        return True
     except:
         print("Could not download that file..")
-        return 0
+        return False
 
 
 def save_image(url):
@@ -195,10 +193,10 @@ def save_image(url):
             # "wb" = write in binary mode.
             with open(file_path, "wb") as specified_folder:
                 specified_folder.write(downloaded.content)
-            return 1
+            return True
     except:
         print("Could not download that file..")
-        return 0
+        return False
 
 
 def read_pcap():

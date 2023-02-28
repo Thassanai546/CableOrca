@@ -6,18 +6,22 @@ def get_speed_mbs():
     try:
         output = ""
         url_to_result = ""
-        output += "\nNetwork Speed Test Results:\n"
+        output += "Network Speed Test Results:\n\n"
 
         start_time = time.time()
         my_test = speedtest.Speedtest()
-        my_test.get_best_server()
 
         # Change to mbs
         download_speed = my_test.download()/1000000
         upload_speed = my_test.upload()/1000000
 
-        output += "Download Speed: {:.2f} Mbps\n".format(download_speed)
-        output += "Upload Speed: {:.2f} Mbps\n".format(upload_speed)
+        best_server = my_test.get_best_server()
+        best_server = best_server['name'] # Extract name from dict.
+        best_server = str(best_server)
+
+        output += "Download Speed:\t {:.2f} Mbps\n".format(download_speed)
+        output += "Upload Speed:\t {:.2f} Mbps\n\n".format(upload_speed)
+        output += "Nearest Server:\t{}\n".format(best_server)
 
         end_time = time.time()
         elapsed_time = end_time - start_time

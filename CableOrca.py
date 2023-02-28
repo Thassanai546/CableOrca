@@ -57,24 +57,25 @@ class MainWindow(tk.Tk):
         self.sidebar.pack(side="left", fill="y")
 
         # Create and pack buttons for sidebar
+        # Buttons have been placed in order according to network diagnostic steps!
         self.button1 = tk.Button(
-            self.sidebar, width=20, text="Home", command=lambda: self.change_window(Window1))
-        self.button1.pack(padx=5, pady=2)
+            self.sidebar, width=17, text="Home", command=lambda: self.change_window(Window1))
+        self.button1.pack(padx=4, pady=3)
         self.button5 = tk.Button(
-            self.sidebar, width=20, text="Network Speed Test", command=lambda: self.change_window(Window5))
-        self.button5.pack(padx=5, pady=2)
+            self.sidebar, width=17, text="Network Speed Test", command=lambda: self.change_window(Window5))
+        self.button5.pack(pady=3)
         self.button3 = tk.Button(
-            self.sidebar, width=20, text="Discover Devices", command=lambda: self.change_window(Window3))
-        self.button3.pack(padx=5, pady=2)
+            self.sidebar, width=17, text="Discover Devices", command=lambda: self.change_window(Window3))
+        self.button3.pack(pady=3)
         self.button2 = tk.Button(
-            self.sidebar, width=20, text="Configure Scan", command=lambda: self.change_window(Window2))
-        self.button2.pack(padx=5, pady=2)
+            self.sidebar, width=17, text="Configure Scan", command=lambda: self.change_window(Window2))
+        self.button2.pack(pady=3)
         self.button4 = tk.Button(
-            self.sidebar, width=20, text="Analyse .pcap file", command=lambda: self.change_window(Window4))
-        self.button4.pack(padx=5, pady=2)
+            self.sidebar, width=17, text="Analyse .pcap File", command=lambda: self.change_window(Window4))
+        self.button4.pack(pady=3)
         self.button6 = tk.Button(
-            self.sidebar, width=20, text="Button 6", command=lambda: self.change_window(Window6))
-        self.button6.pack(padx=5, pady=2)
+            self.sidebar, width=17, text="Button 6", command=lambda: self.change_window(Window6))
+        self.button6.pack(pady=3)
 
         # Create main window container
         self.container = tk.Frame(self)
@@ -160,13 +161,13 @@ class Window1(tk.Frame):
                 # Disclaimer is always displayed
                 disclaimer = """[ ! ] A packet sniffer is a tool that allows a user to monitor and capture data being transmitted over a network. It is important to understand that the use of packet sniffers can be illegal, especially if used without proper authorization or for malicious purposes."""
                 tk.Label(self, text=disclaimer, justify="left", font=(
-                    home_font, 11), wraplength=500, fg="red").pack(pady=15)
+                    home_font, 12), wraplength=500, fg="red").pack(pady=15)
             else:
                 warning = tk.Label(
                     self, font=(home_font, 14), fg="#cd5e6a", text="Attention! CableOrca requires a PCAP library, and it appears that one could not be found on your system.\nTo ensure proper functioning, please follow the link provided below to download and install the necessary library.")
                 warning.pack()
                 hyperlink = tk.Label(
-                    self, font=(home_font, 13), text="Link to Download", fg="blue", cursor="hand2")
+                    self, font=(home_font, 14), text="Link to Download", fg="blue", cursor="hand2")
                 hyperlink.pack()
                 # Button-1 = mouseclick
                 hyperlink.bind(
@@ -303,34 +304,60 @@ class Window3(tk.Frame):
         message.pack()
 
         def start_arp_sweep():
+            # Called when "Start" button is clicked.
             result_of_arp_discover = arp_discovery()
             arp_text_output.config(state="normal")
             arp_text_output.delete("1.0", tk.END)
-            arp_text_output.insert(tk.END, result_of_arp_discover)
+
+            for line in result_of_arp_discover.splitlines():
+                if "Manufacturer: Not Found." in line:
+                    arp_text_output.insert(tk.END, line + '\n', "red")
+                else:
+                    arp_text_output.insert(tk.END, line + '\n')
+
+            # Set text area tag configuration to change font color
+            arp_text_output.tag_config("red", foreground="red")
+
             arp_text_output.config(state="disabled")
             message.config(text="Device Discovery Completed!")
 
-        # Start button
-        tk.Button(self, text="Start", width=15,
-                  command=start_arp_sweep, font=(dev_discover_font, 11), bg="#58d68d").pack()
+            # Enable save button as we have content to save now.
+            save_btn.config(state=tk.NORMAL)
 
-        # Text Area for output
+        def call_file_saver():
+            # called by "Save Results" button.
+            # 1.0 = line 1, col 0. end-1c = end of text -1 character.
+            output = arp_text_output.get("1.0", "end-1c")
+            if save_txt_file(output):
+                message.config(text="Results Have Been Saved.")
+            else:
+                message.config(text="Results Have Not Been Saved.")
+
+        # Start button
+        # Calls arp_sweeper.py function
+        start_btn = tk.Button(self, text="Begin Discovery", width=15,
+                              command=start_arp_sweep, font=(dev_discover_font, 11), bg="#58d68d")
+        start_btn.pack(pady=2)
+
+        # Text Area for output of arp sweep results
         arp_text_output = tk.Text(
-            self, height=17, width=125, state="disabled", font=("Calibri", 11))
+            self, height=17, width=115, wrap="word")  # wrap="word" = prevent mid-word wrapping.
+        arp_text_message = "An ARP request is a type of network packet used to determine the MAC address of a device on the local network. It works by broadcasting a request to all devices on the network, asking the device with a specific IP address to respond with its MAC address."
+        arp_text_output.insert(tk.END, arp_text_message)
+        arp_text_output.config(bg="#e9eaeb", state="disabled")
         arp_text_output.pack(pady=10)
+
+        # Create save button that is disabled by default.
+        save_btn = tk.Button(self, text="Save Results", width=15,
+                             command=call_file_saver, font=(dev_discover_font, 11))
+        save_btn.pack(pady=2)
+        save_btn.config(state=tk.DISABLED)
 
 
 class Window4(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
-
-        # PCAP File Analysis
-
-        pcap_analysis_font = "Calibri"
-
-        heading = tk.Label(
-            self, text="Please select a PCAP file to read.", font=(pcap_analysis_font, 14))
-        heading.pack()
+        # Read a .pcap file
 
         # Persistant window, displayed before reading starts.
         try:
@@ -348,15 +375,19 @@ class Window5(tk.Frame):
 
         speed_test_font = "Calibri"
 
-        tk.Label(self, justify="left", text="Network Speedtest",
-                 font=(speed_test_font, 14)).pack(pady=5)
-        tk.Label(self, justify="left", text="The speed at which CableOrca tests your upload and download speed depends on your network.", font=(
-            speed_test_font, 13)).pack()
+        # Title of current window.
+        title = tk.Label(self, justify="left", text="Network Speedtest",
+                         font=(speed_test_font, 14))
+        title.pack(pady=5)
+
+        message = tk.Label(self, justify="left", text="The speed at which CableOrca tests your upload and download speed depends on your network.", font=(
+            speed_test_font, 13))
+        message.pack()
 
         # Public IP address is discovered once per session.
         global PUBLIC_IP
         if PUBLIC_IP == "":
-            # Try to get public IP address of current device using "api.ipify.org".
+            # Try to get public IP address of current device using "api.ipify.org"/socket.
             PUBLIC_IP = get_public_ip()
 
         # If we have a public IP address, display it to gui.
@@ -368,59 +399,43 @@ class Window5(tk.Frame):
                 self, text=public_ip_output, justify="left", font=(speed_test_font, 13))
             self.public_ip_label.pack()
 
-        # This is the label that will show the results of the network speed test.
-        self.result_label = tk.Label(
-            self, text="", justify="left", font=(speed_test_font, 15))
-        self.result_label.pack()
+        # Configure speed_test_output window.
+        # wrap="word" = prevent mid-word wrapping.
+        speed_test_output = tk.Text(self, height=8, width=44, wrap="word", font=(
+            speed_test_font, 14), padx=3, pady=3)
+        speed_test_output.pack(pady=4)
+        default_text = "Please refrain from interacting with the application for approximately 20 seconds while the network speed is being measured."
+        speed_test_output.insert('end', default_text)
+        speed_test_output.config(state=tk.DISABLED)
 
-        # This is the label that will show the "Please stand by" message.
-        self.standby_label = tk.Label(
-            self, text="", justify="left", font=(speed_test_font, 15))
-        self.standby_label.pack(pady=5)
+        def on_start_button_click():
+            speed_test_output.config(state=tk.NORMAL)
+            speed_test_output.delete("1.0", tk.END)
 
+            self.url, self.result = get_speed_mbs()
+            speed_test_output.insert('end', self.result)
+            speed_test_output.config(state=tk.DISABLED)
+
+            # Enable save button now that we have results
+            save_button.config(state=tk.NORMAL)
+
+        # Button to start network speed test
         tk.Button(self, text="Start", width=15,
-                  command=self.on_start_button_click, font=(speed_test_font, 12), bg="#58d68d").pack()
+                  command=on_start_button_click, font=(speed_test_font, 12), bg="#58d68d").pack(pady=2)
 
-    def on_start_button_click(self):
-        # Note: labels must first be stored as instance variables if you want to configure them!
-        # This is done my using label.pack after creating the label.
-        # Do not use  mylabel = tk.Label(...).pack() !
-        self.standby_label.config(
-            text="Please stand by...")
-        # Update the GUI to display the "Please stand by" message.
-        self.update_idletasks()
-
-        # Without use of "self.", old results would be saved as an image.
-        url, printable_result = get_speed_mbs()
-
-        self.result_label.config(text=printable_result)
-        # Hide the "Please stand by" message.
-        self.standby_label.config(text="")
-
-        # A save button is created for each speedtest, only spawn one button.
-        if not hasattr(self, "save_url_res_button"):
-            # Spawn save results button that uses a url to the results.
-            self.save_url_res_button = tk.Button(self, text="Save Results", command=lambda: attempt_result_dl(
-                url), font=("Calibri", 11), width=15, bg="#85c1e9")
-            self.save_url_res_button.pack(pady=10)
-
-        if not hasattr(self, "res_label"):
-            self.res_label = tk.Label(
-                self, text="", justify="left", font=("Calibri", 12))
-            self.res_label.pack()
-        else:
-            self.res_label.config(text="")
-
-        def attempt_result_dl(url):
-            # Call file_manager's save_image function.
-            result = save_image(url)
-
+        def save_btn_clicked():
+            # call file_managery.py save image function
+            result = save_image(self.url)
             if result:
-                res_text = "Image Saved!"
+                message.config(text="Speed Test Results Saved!")
             else:
-                res_text = "Image Not Saved."
+                message.config(text="Speed Test Results Not Saved")
 
-            self.res_label.config(text=res_text)
+        # Button to save results of network speed test
+        save_button = tk.Button(self, text="Save Results", width=15,
+                                command=save_btn_clicked, font=(speed_test_font, 12))
+        save_button.pack(pady=2)
+        save_button.config(state=tk.DISABLED)
 
 
 class Window6(tk.Frame):

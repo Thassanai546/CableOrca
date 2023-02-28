@@ -45,23 +45,28 @@ def arp_discovery():
         current_time = datetime.now()
 
         output = "<=== Device Discovery Sweep Date: " + \
-            str(current_time) + " ===>" + '\n'
+            str(current_time) + " ===>\n"
 
         for sent, received in result:
             try:
+                #ljust used here for consistent tabbing output.
                 mac_address = received.hwsrc
+                ip_address = str(received.psrc)
                 manufacturer = lookup.lookup(mac_address)
-                output += "MAC: " + mac_address + " Manufacturer: " + \
-                    manufacturer + " IP: " + received.psrc + "\n"
+                output += "MAC: " + mac_address + "\tIP: " + \
+                    ip_address.ljust(18) + "\tManufacturer: " + \
+                    manufacturer + "\n"
             except:
-                output += "MAC: " + mac_address + " IP: " + \
-                    received.psrc + " (Could not find manufacturer)\n"
+                output += "MAC: " + mac_address + "\tIP: " + \
+                    ip_address.ljust(
+                        18) + "\tManufacturer: Not Found." + "\n"
 
         end_time = time.time()
         total_time = end_time - start_time
-        total_time = round(total_time, 2)
+        total_time = round(total_time)
+
         output += "<=== Analysis completed in " + \
-            str(total_time) + " seconds. Network: " + ip_range + " ===>"
+            str(total_time) + " seconds. The Network Scanned: " + ip_range + " ===>"
 
         # print(output)
         return output

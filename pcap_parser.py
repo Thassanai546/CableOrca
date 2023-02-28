@@ -16,6 +16,11 @@ class ReaderWindow(tk.Frame):
 
         pcap_reading_window_font = "Calibri"
 
+        # Heading
+        self.heading = tk.Label(
+            self, text="Please select a PCAP file to read.", font=(pcap_reading_window_font, 14))
+        self.heading.pack()
+
         # Select file button
         self.select_file_btn = tk.Button(self, text="Select File", width=15,
                                          command=self.select_file_clicked, font=(pcap_reading_window_font, 12), bg="#58d68d")
@@ -25,7 +30,8 @@ class ReaderWindow(tk.Frame):
         self.packet_read_frame = tk.Frame(self)
         self.packet_read_frame.pack()
 
-        self.packet_field = tk.Text(self.packet_read_frame, height=17, width=125, font=(
+        # Packet view text area
+        self.packet_field = tk.Text(self.packet_read_frame, height=17, width=130, font=(
             "consolas", 10), pady=10)  # WIDTH and HEIGHT set here
         self.packet_field.pack(side=tk.LEFT)
 
@@ -44,11 +50,16 @@ class ReaderWindow(tk.Frame):
         # Select file button clicked.
 
         # read_pcap uses rdpcap(file) and returns a list of packets.
-        self.filenamme, self.packet_list = read_pcap()
+        self.filepath, self.packet_list = read_pcap()
 
         # Clicking stop disables the stop button.
         # Re-enable for new file reading process.
         self.stop_button.config(state=tk.NORMAL)
+
+        # Change heading to file selected
+        filename = os.path.basename(self.filepath) # Strip path, display only filename.
+        read_info = "Reading File: " + filename
+        self.heading.config(text=read_info)
 
         self.read_file(self.packet_list)
 
@@ -75,6 +86,12 @@ class ReaderWindow(tk.Frame):
             self.packet_field.insert(tk.END, str(pkt))
             self.packet_field.insert(tk.END, '\n')
             self.packet_field.see(tk.END)
+
+        # Once read is finished, disable "stop button"
+        # Alert user
+        self.stop_button.config(state=tk.DISABLED)
+        self.heading.config(text="File Reading Complete!")
+
 
     def stop_reading_thread(self):
         # Called by "Stop Reading" button

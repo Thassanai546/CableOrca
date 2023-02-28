@@ -2,7 +2,6 @@ from scapy.all import *
 from scapy.all import IP
 import tkinter as tk
 
-from gui_engine import create_pcap_saver_frame
 from net_interfaces import *
 from file_manager import *
 
@@ -12,9 +11,8 @@ class SnifferWindow(tk.Frame):
         super().__init__(parent)
         self.pack()
 
-        # Packet view frame allows a "save" button
-        # to be placed underneath the packet view window.
-        # Without building a new frame, the button would get placed beside it.
+        # Packet view frame contains a live packet analysis window
+        # and a "Save Results" button.
         self.packet_view_frame = tk.Frame(self)
         self.packet_view_frame.pack()
 
@@ -58,30 +56,55 @@ class SnifferWindow(tk.Frame):
         self.stop_sniff.set()
 
     def initiate_sniffer(self):
-        # This def defines "display_packet", which appends output to a field on the gui
-        # and call the sniff fucntion with "display_packet" as prn.
-        # in the sniff function, prn is done for every packet captured.
-        # in this case, every packet captured goes to the packet_field on the gui.
+        # Initiate sniffer calls Scapy's sniff() function. Sniff() takes "display_packet" function
+        # as an argument. This function is called on each packet that Scapy captures.
+
         def display_packet(packet):
+            # Take a packet and append it to the text field on the GUI.
             self.packet_field.insert(tk.END, packet.summary() + "\n")
             self.packet_field.update_idletasks()
             self.packet_field.see('end')
 
         try:
-            # pkts = sniff(iface=self.interface, prn=display_packet, store=True, timeout=self.duration)
+            def call_pcap_saver():
+                # called by "save_button"
+                save_result = ""
+                if save_to_pcap(captured_packets):  # Call file_manager.py function
+                    save_result = ".PCAP File Saved"
+                else:
+                    save_result = ".PCAP Not File Saved"
+
+                message.config(text=save_result)
 
             # iface = interface, prn = processing done for each packet, timeout = duration of analysis,
             # store = true grants ability to save capture to a .pcap file
             # stop_filter = stop thread that is running sniff function. Stopping sniff jumps to "create_pcap_saver_frame".
-            pkts = sniff(iface=self.interface, prn=display_packet, store=True,
+            captured_packets = sniff(iface=self.interface, prn=display_packet, store=True,
                          timeout=self.duration, stop_filter=lambda p: self.stop_sniff.is_set())
-            # Prevent the user from accidently typing in to the packet output field.
-            self.packet_field.config(state="disabled")
-            self.stop_button.config(state="disabled", bg="grey")
-            # print("Sniffing complete")
 
-            # call file_manager saving functions:
-            create_pcap_saver_frame(self, pkts)  # file_manager.py
+            # Prevent the user from accidently typing inisde the packet output field.
+            self.packet_field.config(state="disabled")
+
+            self.stop_button.config(state="disabled", bg="grey")
+
+            # Packet sniffing has ended, display message and save button.
+            message = tk.Label(self, text="Packet Sniffing Complete.",
+                               font=("Calibri", 13), pady=5)
+            message.pack()
+
+            # save_to_pcap function from file_manager.py used.
+            save_button = tk.Button(self, text="Click here to save file",
+                                    command=call_pcap_saver, width=20, font=("Calibri", 11), bg="white")
+            save_button.pack(pady=10)
+
+        # Errors are displayed on the GUI inside the packet_field text area.
+        except OSError as ex:
+            # Network interface error
+            error_message = f"Error: {ex.strerror}"
+            self.packet_field.insert(tk.END, error_message)
+            self.packet_field.update_idletasks()
+            self.packet_field.see('end')
+
         except Exception as ex:
             self.packet_field.insert(tk.END, ex)
             self.packet_field.update_idletasks()

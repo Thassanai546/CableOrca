@@ -65,19 +65,27 @@ def get_current_device():
 
 
 def get_public_ip():
+    # Get the public ip address of the current device.
+    # If we can't reach ipify, try socket.
     try:
-        print("Asking for public address...")
-        response = requests.get("https://api.ipify.org", timeout=10)
-        response.raise_for_status()
+        response = requests.get('https://api.ipify.org')
         return response.text
-    except requests.exceptions.RequestException as error:
-        return "Failed to retrieve public IP address. Error: {}".format(error)
+
+    except requests.exceptions.RequestException:
+        skt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        skt.connect(('8.8.8.8', 80))  # Try google DNS.
+        return skt.getsockname()[0]
+
+    except Exception as ex:
+        print(ex)
+        return "Error"
 
 
 def check_internet():
     # Use requests library to test for internet connection
-    servers = ['https://www.google.com','https://www.bing.com', 'https://github.com/']
-    
+    servers = ['https://www.google.com',
+               'https://www.bing.com', 'https://github.com/']
+
     for server in servers:
         try:
             requests.get(server, timeout=5)
