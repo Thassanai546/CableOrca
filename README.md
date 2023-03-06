@@ -10,9 +10,10 @@ One of the key benefits of CableOrca is its simplicity. Unlike other tools that 
 <br><br>
 ##
 <div align="centre">
+  <img src="http://ForTheBadge.com/images/badges/made-with-python.svg" height=30 />
   <img src="https://img.shields.io/badge/Visual_Studio_Code-0078D4?style=for-the-badge&logo=visual%20studio%20code&logoColor=white" height=30 />
   <img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" height=30 />
-  <img src="http://ForTheBadge.com/images/badges/made-with-python.svg" height=30 />
+  <img src="https://img.shields.io/badge/Visual_Studio_Code-0078D4?style=for-the-badge&logo=visual%20studio%20code&logoColor=white" height=30/>
 </div>
 
 ##
