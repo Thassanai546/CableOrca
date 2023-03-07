@@ -8,6 +8,10 @@ import threading
 
 from file_manager import *
 
+# Globals
+pcap_file_name = None
+pcap_file_list = None
+
 
 class ReaderWindow(tk.Frame):
     def __init__(self, parent):
@@ -21,17 +25,46 @@ class ReaderWindow(tk.Frame):
             self, text="Please select a PCAP file to read.", font=(pcap_reading_window_font, 14))
         self.heading.pack()
 
+        # Button frame
+        self.button_frame = tk.Frame(self)
+        self.button_frame.pack()
+
         # Select file button
-        self.select_file_btn = tk.Button(self, text="Select File", width=15,
+        self.select_file_btn = tk.Button(self.button_frame, text="Select File", width=15,
                                          command=self.select_file_clicked, font=(pcap_reading_window_font, 12), bg="#58d68d")
-        self.select_file_btn.pack(pady=5)
+        self.select_file_btn.pack(side=tk.LEFT, pady=5, padx=5)
+
+        # Tiered buttons instructions:
+        # Command = self.specified_command
+        # A specified_command should follow the "clicked button"
+        # Guidelines specified below.
+        # For each button, enable it once a file has been selected
+        # This is done in select_file_clicked()
+
+        # Tier 1
+        self.tier_one = tk.Button(self.button_frame, text="Tier 1", width=15,
+                                  command=self.tier_one_clicked, font=(pcap_reading_window_font, 12))
+        self.tier_one.pack(side=tk.LEFT, pady=5, padx=5)
+        self.tier_one.config(state=tk.DISABLED)
+
+        # Tier 2
+        self.tier_two = tk.Button(self.button_frame, text="Tier 2", width=15,
+                                  command=self.tier_two_clicked, font=(pcap_reading_window_font, 12))
+        self.tier_two.pack(side=tk.LEFT, pady=5, padx=5)
+        self.tier_two.config(state=tk.DISABLED)
+
+        # Tier 3
+        self.tier_three = tk.Button(self.button_frame, text="Tier 3", width=15,
+                                    command=self.tier_three_clicked, font=(pcap_reading_window_font, 12))
+        self.tier_three.pack(side=tk.LEFT, pady=5, padx=5)
+        self.tier_three.config(state=tk.DISABLED)
 
         # Packet view frame
         self.packet_read_frame = tk.Frame(self)
         self.packet_read_frame.pack()
 
         # Packet view text area
-        self.packet_field = tk.Text(self.packet_read_frame, height=17, width=130, font=(
+        self.packet_field = tk.Text(self.packet_read_frame, height=13, width=130, font=(
             "consolas", 10), pady=10)  # WIDTH and HEIGHT set here
         self.packet_field.pack(side=tk.LEFT)
 
@@ -41,41 +74,79 @@ class ReaderWindow(tk.Frame):
 
         self.packet_field.config(yscrollcommand=self.scrollbar.set)
 
-        # Stop reading button
+        # Stop reading button, disabled by default
         self.stop_button = tk.Button(
             self, text="Stop Reading", command=self.stop_reading_thread, width=20, bg="red", font=(pcap_reading_window_font, 11))
         self.stop_button.pack(pady=10)
 
+        self.stop_button.config(state=tk.DISABLED)
+
     def select_file_clicked(self):
         # Select file button clicked.
+        # Try, as user may not always select a file
+        try:
+            global pcap_file_name
+            global pcap_file_list
+            # read_pcap uses rdpcap(file) and returns a list of packets.
+            pcap_file_name, pcap_file_list = read_pcap()
 
-        # read_pcap uses rdpcap(file) and returns a list of packets.
-        self.filepath, self.packet_list = read_pcap()
+            # Change heading to file selected
+            # Strip path, display only filename.
+            pcap_file_name_stripped = os.path.basename(pcap_file_name)
+            read_info = "Selected File: " + pcap_file_name_stripped
+            self.heading.config(text=read_info)
 
-        # Clicking stop disables the stop button.
-        # Re-enable for new file reading process.
+            # Enable analysis buttons now that a file has been selected.
+            self.tier_one.config(state=tk.NORMAL)
+            self.tier_two.config(state=tk.NORMAL)
+            self.tier_three.config(state=tk.NORMAL)
+        except:
+            read_info = "No File Selected."
+            self.heading.config(text=read_info)
+
+    # Writing button clicked events:
+    # Define global packet list var
+    # Clear existing packet field
+    # Enable the stop button
+    # Call thread primer with specified thread name.
+
+    def tier_one_clicked(self):
+        global pcap_file_list
+        self.clear_packet_field()
         self.stop_button.config(state=tk.NORMAL)
+        self.thread_primer(pcap_file_list, "raw_read_thread")
 
-        # Change heading to file selected
-        filename = os.path.basename(self.filepath) # Strip path, display only filename.
-        read_info = "Reading File: " + filename
-        self.heading.config(text=read_info)
+    def tier_two_clicked(self):
+        global pcap_file_list
+        self.clear_packet_field()
+        self.stop_button.config(state=tk.NORMAL)
+        self.thread_primer(pcap_file_list, "composition_read_thread")
 
-        self.read_file(self.packet_list)
+    def tier_three_clicked(self):
+        global pcap_file_list
+        self.clear_packet_field()
+        self.stop_button.config(state=tk.NORMAL)
+        self.thread_primer(pcap_file_list, "socket_read")
 
-    def read_file(self, packet_list):
+    # THREAD PRIMER takes a READ THREAD
+    def thread_primer(self, packet_list, target_func_name):
         self.packet_field.delete("1.0", tk.END)
         self.thread_stop = threading.Event()
+        target_func = getattr(self, target_func_name)
 
         # Note args=(), from the thread constructor expects a tuple of arguments.
         # (packet_list,) = tuple with one element
         # (packet_list) = single argument
         # This is why ',' is needed.
         read_thread = threading.Thread(
-            target=self.read_file_thread, args=(packet_list,))
+            target=target_func, args=(packet_list,))
         read_thread.start()
 
-    def read_file_thread(self, packet_list):
+    # READ THREADS - These are passed in to thread_primer for .pcap analysis.
+
+    def raw_read_thread(self, packet_list):
+        # THREAD A
+        # Raw read, no analysis
         for pkt in packet_list:
             # Stop thread if stop button has been clicked
             if self.thread_stop.is_set():
@@ -92,10 +163,82 @@ class ReaderWindow(tk.Frame):
         self.stop_button.config(state=tk.DISABLED)
         self.heading.config(text="File Reading Complete!")
 
+    def composition_read_thread(self, packet_list):
+        # THREAD B
+        self.stop_button.config(state=tk.DISABLED)
+        global pcap_file_name
 
+        ip_address_counter = Counter()
+
+        for pkt in packet_list:
+            if 'IP' in pkt:
+                source_ip = pkt['IP'].src
+                ip_address_counter[source_ip] += 1
+
+        counter_sum = sum(ip_address_counter.values())
+
+        # Counter contains ip addresses and their occurences
+        # This list will contain tuples with ip addresses and their percentages.
+        ips_with_percentages = []
+
+        for address, occurences in ip_address_counter.items():
+            percentage = 100 * occurences / counter_sum  # Get percentage
+            ips_with_percentages.append(
+                (address, percentage))  # Build a list of tuples
+
+        sorted_percentages = sorted(
+            ips_with_percentages, key=lambda x: x[1], reverse=True)
+
+        initial_output = "Below are the percentages representing the composition of:\n" + \
+            pcap_file_name + '\n'
+        self.packet_field.insert(tk.END, initial_output)
+        self.packet_field.see(tk.END)
+
+        # Iterate list of tuples
+        for entry in sorted_percentages:
+            address, percentage = entry
+            address = search_org(address)
+            current_output = ("{}: {:.2f}%\n".format(address, percentage))
+            # print(current_output)
+            self.packet_field.insert(tk.END, str(current_output))
+            self.packet_field.see(tk.END)
+
+        composition = public_private_composition(pcap_file_name)
+        self.packet_field.insert(tk.END, '\n')
+        self.packet_field.insert(tk.END, str(composition))
+        self.packet_field.see(tk.END)
+        self.heading.config(text="File Reading Complete!")
+
+    def socket_read(self, packet_list):
+        # THREAD C
+        global pcap_file_name
+
+        for pkt in packet_list:
+            if self.thread_stop.is_set():
+                self.stop_button.config(state=tk.DISABLED)
+                break
+
+            result = socket_translator(pkt)
+            if result:
+                # Only attempt insert if a result is given.
+                self.packet_field.insert(tk.END, result + '\n')
+                self.packet_field.see(tk.END)
+
+        composition = public_private_composition(pcap_file_name)
+        self.packet_field.insert(tk.END, '\n')
+        self.packet_field.insert(tk.END, str(composition))
+        self.packet_field.see(tk.END)
+        self.heading.config(text="[!] Socket Translate Concluded.")
+        self.stop_button.config(state=tk.DISABLED)
+
+    # Thread and packet_field management.
     def stop_reading_thread(self):
         # Called by "Stop Reading" button
         self.thread_stop.set()
+
+    def clear_packet_field(self):
+        self.packet_field.delete("1.0", tk.END)
+        print("Text field wiped.")
 
 
 def is_private_ip(ip_address):
@@ -238,13 +381,13 @@ def public_private_composition(pcap_file):
         public_percent = (public_ip / total_ips) * 100
         private_percent = (private_ip / total_ips) * 100
 
-        print(
-            f"Public IP addresses: {'{:.2f}'.format(public_percent)}%\nPrivate IP addresses: {'{:.2f}'.format(private_percent)}%")
+        return (f"This pcap file is {'{:.2f}'.format(public_percent)}% public addresses\n"
+                f"This pcap file is {'{:.2f}'.format(private_percent)}% private addresses.")
 
     except FileNotFoundError:
-        print(f"Error: Could not find file {pcap_file}")
+        return (f"Error: Could not find file {pcap_file}")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        return (f"An error occurred: {e}")
 
 
 # GLOBAL VARIABLES for "socket_translator"
@@ -288,4 +431,4 @@ def socket_translator(packet):
             dst_attempted_resolve = translated_ips[dst]
 
     if src != "??" or dst != "??":
-        print(src_attempted_resolve, "->", dst_attempted_resolve)
+        return f"{src_attempted_resolve} -> {dst_attempted_resolve}"

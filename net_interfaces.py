@@ -68,6 +68,7 @@ def get_public_ip():
     # Get the public ip address of the current device.
     # If we can't reach ipify, try socket.
     try:
+        print("Fetching Public IP from ipify.org...")
         response = requests.get('https://api.ipify.org')
         return response.text
 

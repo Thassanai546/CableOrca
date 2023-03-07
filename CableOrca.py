@@ -1,5 +1,5 @@
-from PIL import Image, ImageTk
 import tkinter as tk
+from PIL import Image, ImageTk
 
 from windows_library_check import *
 from net_interfaces import *
@@ -10,14 +10,28 @@ from file_manager import *
 from arp_sweeper import *
 from gui_engine import *
 
-# Globals:
-# As windows changes, certain variables need to be held
-# so that processing time is saved.
-DEVICE_INFO = ""
-PUBLIC_IP = ""
-LIBRARY_CHECK = False
-HAS_PCAP_LIBR = False
-INTERNET_CON = bool
+
+class GlobalDetails:
+    def __init__(self):
+        # Globals:
+        # As windows changes, certain variables need to be held
+        # so that processing time is saved.
+        self.device_info = ""
+        self.public_ip = ""
+        self.library_check = False
+        self.has_pcap_libr = False
+        self.internet_con = bool
+
+    def reset(self):
+        # Potentially add button to reset all data.
+        self.device_info = ""
+        self.public_ip = ""
+        self.library_check = False
+        self.has_pcap_libr = False
+        self.internet_con = bool
+
+
+global_details = GlobalDetails()
 
 
 class MainWindow(tk.Tk):
@@ -25,10 +39,10 @@ class MainWindow(tk.Tk):
         super().__init__()
 
         # Configure title for CO Online, or Offline mode.
-        global INTERNET_CON
-        INTERNET_CON = check_internet()  # From net_interfaces.py
+        # From net_interfaces.py, returns true/false
+        global_details.internet_con = check_internet()
 
-        if INTERNET_CON:
+        if global_details.internet_con:
             self.title("CableOrca - Online Mode")
         else:
             self.title("CableOrca - Offline Mode")
@@ -103,16 +117,7 @@ class Window1(tk.Frame):
 
         # Home/Welcome Page.
 
-        global DEVICE_INFO      # Prevent repeated lookups.
-        global LIBRARY_CHECK    # Has the system been checked for a pcap library?
-        global HAS_PCAP_LIBR    # Does the system have a pcap library?
-        global INTERNET_CON     # Does CO have access to the internet?
-
         home_font = "Calibri"
-
-        # Prevent need for discovering device name every time it is needed
-        if DEVICE_INFO == "":
-            DEVICE_INFO = get_current_device()
 
         # This message is always displayed.
         try:
@@ -123,20 +128,25 @@ class Window1(tk.Frame):
             tk.Label(self, text="Welcome to CableOrca, the high-level packet sniffer!",
                      justify="left", font=(home_font, 14), pady=5, padx=5, fg="white", bg="#222a38").pack(pady=10)
 
+        # Prevent need for discovering device name every time it is needed
+        if global_details.device_info == "":
+            global_details.device_info = get_current_device()
+
         # Attempt to display device information
-        tk.Label(self, text=DEVICE_INFO,
+        tk.Label(self, text=global_details.device_info,
                  justify="left", font=(home_font, 14)).pack()
 
         # Attempt to display CableOrca logo
         try:
             image = Image.open("CableOrca_files\CableOrcaIcon.png")
-            image = image.resize((230, 230), Image.LANCZOS)
+            image = image.resize((250, 250), Image.LANCZOS)
             self.photo = ImageTk.PhotoImage(image)
             tk.Label(self, image=self.photo).pack(pady=5, padx=5)
         except Exception as ex:
+            print(ex)
             pass
 
-        if INTERNET_CON:
+        if global_details.internet_con:
             tk.Label(self, fg="#2fc76d", text="Internet Connection Established - Online Mode Enabled",
                      justify="left", font=(home_font, 14), pady=5, padx=5).pack(pady=5)
         else:
@@ -147,13 +157,12 @@ class Window1(tk.Frame):
         # If it is not found, links npcap download page.
         # Note! It is important to leave space on the homepage for this warning!
         try:
-            if LIBRARY_CHECK is False:
+            if global_details.library_check is False:
                 # Search for a specified dll on the system.
-                HAS_PCAP_LIBR = check_dll("wpcap.dll")
-                print("System was searched for a pcap library.")
+                global_details.has_pcap_libr = check_dll("wpcap.dll")
 
-            if HAS_PCAP_LIBR:
-                LIBRARY_CHECK = True  # System has been checked for wpcap.dll
+            if global_details.has_pcap_libr:
+                global_details.library_check = True  # System has been checked for wpcap.dll
                 message = tk.Label(
                     self, justify="left", text="The required PCAP library has been detected on your system. The application is now ready to run.", fg="#2fc76d", font=(home_font, 14))
                 message.pack()
@@ -161,7 +170,7 @@ class Window1(tk.Frame):
                 # Disclaimer is always displayed
                 disclaimer = """[ ! ] A packet sniffer is a tool that allows a user to monitor and capture data being transmitted over a network. It is important to understand that the use of packet sniffers can be illegal, especially if used without proper authorization or for malicious purposes."""
                 tk.Label(self, text=disclaimer, justify="left", font=(
-                    home_font, 12), wraplength=500, fg="red").pack(pady=15)
+                    home_font, 12), wraplength=500, fg="red").pack(pady=10)
             else:
                 warning = tk.Label(
                     self, font=(home_font, 14), fg="#cd5e6a", text="Attention! CableOrca requires a PCAP library, and it appears that one could not be found on your system.\nTo ensure proper functioning, please follow the link provided below to download and install the necessary library.")
@@ -172,6 +181,7 @@ class Window1(tk.Frame):
                 # Button-1 = mouseclick
                 hyperlink.bind(
                     "<Button-1>", lambda e: open_browser("https://npcap.com/#download"))
+
         except Exception as ex:
             tk.Label(
                 self, text="Failed to search for pcap library on this operating system.").pack()
@@ -199,7 +209,7 @@ class Window2(tk.Frame):
         scanner_font = "Calibri"
 
         # Display device information + Heading
-        self.device_info = tk.Label(self, text=DEVICE_INFO, justify="left", font=(
+        self.device_info = tk.Label(self, text=global_details.device_info, justify="left", font=(
             scanner_font, 12), borderwidth=2, relief="ridge", pady=6, padx=6)
         self.device_info.pack(pady=5)
 
@@ -385,15 +395,14 @@ class Window5(tk.Frame):
         message.pack()
 
         # Public IP address is discovered once per session.
-        global PUBLIC_IP
-        if PUBLIC_IP == "":
+        if global_details.public_ip == "":
             # Try to get public IP address of current device using "api.ipify.org"/socket.
-            PUBLIC_IP = get_public_ip()
+            global_details.public_ip = get_public_ip()
 
         # If we have a public IP address, display it to gui.
-        if PUBLIC_IP:
+        if global_details.public_ip:
             public_ip_output = "This is your public IP address: "
-            public_ip_output += PUBLIC_IP
+            public_ip_output += global_details.public_ip
 
             self.public_ip_label = tk.Label(
                 self, text=public_ip_output, justify="left", font=(speed_test_font, 13))
@@ -407,6 +416,9 @@ class Window5(tk.Frame):
         default_text = "Please refrain from interacting with the application for approximately 20 seconds while the network speed is being measured."
         speed_test_output.insert('end', default_text)
         speed_test_output.config(state=tk.DISABLED)
+
+        self.url = ""
+        self.result = ""
 
         def on_start_button_click():
             speed_test_output.config(state=tk.NORMAL)

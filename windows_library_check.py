@@ -1,6 +1,5 @@
 import ctypes
 import webbrowser
-import subprocess
 
 '''
 ctypes allows calling functions in DLLs or shared libraries.
