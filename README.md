@@ -10,7 +10,10 @@ One of the key benefits of CableOrca is its simplicity. Unlike other tools that 
 <br><br>
 
 # Screenshots
-Coming Soon...
+
+<img src="https://user-images.githubusercontent.com/72495327/224557215-acfe10fe-7f7f-4acf-9f1f-f80d32be2056.png" width=700/>
+<img src="https://user-images.githubusercontent.com/72495327/224557232-ed06c716-3830-419b-8dd7-5b7056672c65.png" width=700/>
+<img src="https://user-images.githubusercontent.com/72495327/224557262-e831e3a0-9b2d-45dd-8303-0dafd087931c.png" width=700/>
 
 ##
 
