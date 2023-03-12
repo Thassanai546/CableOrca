@@ -1,16 +1,35 @@
-from collections import Counter
-from ipwhois import IPWhois
-from scapy.all import IP
-from scapy.all import *
-import tkinter as tk
-from graph import *
 import threading
+
+import ipaddress
+from ipwhois import IPWhois
+import socket
+import tkinter as tk
+from collections import Counter
+from scapy.all import IP, IPv6
+from scapy.all import *
 
 from file_manager import *
 
-# Globals
-pcap_file_name = None
-pcap_file_list = None
+
+class GlobalParsingVars:
+    def __init__(self):
+        # These vars change for each new .pcap file selected.
+        self.pcap_file_name = None
+        self.pcap_file_list = None
+
+        # Socket Translator Vars, these are persistant for CableOrca's runtime.
+        self.translated_ips = {}  # stores {ip: hostname}
+        self.unknown_ips = set()  # stores ips that could not be resolved
+
+    def reset(self):
+        self.pcap_file_name = None
+        self.pcap_file_list = None
+        self.translated_ips = {}
+        self.unknown_ips = set()
+        print("GlobalParsingVars has been reset.")
+
+
+global_parse_vars = GlobalParsingVars()
 
 
 class ReaderWindow(tk.Frame):
@@ -22,7 +41,7 @@ class ReaderWindow(tk.Frame):
 
         # Heading
         self.heading = tk.Label(
-            self, text="Please select a PCAP file to read.", font=(pcap_reading_window_font, 14))
+            self, text="Please select a PCAP file to read.", font=(pcap_reading_window_font, 16))
         self.heading.pack()
 
         # Button frame
@@ -64,7 +83,7 @@ class ReaderWindow(tk.Frame):
         self.packet_read_frame.pack()
 
         # Packet view text area
-        self.packet_field = tk.Text(self.packet_read_frame, height=13, width=130, font=(
+        self.packet_field = tk.Text(self.packet_read_frame, wrap="word", height=17, width=130, font=(
             "consolas", 10), pady=10)  # WIDTH and HEIGHT set here
         self.packet_field.pack(side=tk.LEFT)
 
@@ -79,20 +98,23 @@ class ReaderWindow(tk.Frame):
             self, text="Stop Reading", command=self.stop_reading_thread, width=20, bg="red", font=(pcap_reading_window_font, 11))
         self.stop_button.pack(pady=10)
 
+        # No need to stop, if nothing is currently running
         self.stop_button.config(state=tk.DISABLED)
 
     def select_file_clicked(self):
         # Select file button clicked.
         # Try, as user may not always select a file
         try:
-            global pcap_file_name
-            global pcap_file_list
+            self.heading.config(text="Please select a PCAP file to read.")
+
             # read_pcap uses rdpcap(file) and returns a list of packets.
-            pcap_file_name, pcap_file_list = read_pcap()
+            global_parse_vars.pcap_file_name, global_parse_vars.pcap_file_list = read_pcap()
+            print("Global variables set!")
 
             # Change heading to file selected
             # Strip path, display only filename.
-            pcap_file_name_stripped = os.path.basename(pcap_file_name)
+            pcap_file_name_stripped = os.path.basename(
+                global_parse_vars.pcap_file_name)
             read_info = "Selected File: " + pcap_file_name_stripped
             self.heading.config(text=read_info)
 
@@ -100,7 +122,13 @@ class ReaderWindow(tk.Frame):
             self.tier_one.config(state=tk.NORMAL)
             self.tier_two.config(state=tk.NORMAL)
             self.tier_three.config(state=tk.NORMAL)
-        except:
+        except FileNotFoundError:
+            # Handle the case where the user did not select a file.
+            read_info = "No File Selected."
+            self.heading.config(text=read_info)
+        except Exception as ex:
+            # Handle other exceptions that may be thrown by read_pcap.
+            print(ex)
             read_info = "No File Selected."
             self.heading.config(text=read_info)
 
@@ -111,22 +139,20 @@ class ReaderWindow(tk.Frame):
     # Call thread primer with specified thread name.
 
     def tier_one_clicked(self):
-        global pcap_file_list
         self.clear_packet_field()
         self.stop_button.config(state=tk.NORMAL)
-        self.thread_primer(pcap_file_list, "raw_read_thread")
+        self.thread_primer(global_parse_vars.pcap_file_list, "raw_read_thread")
 
     def tier_two_clicked(self):
-        global pcap_file_list
         self.clear_packet_field()
         self.stop_button.config(state=tk.NORMAL)
-        self.thread_primer(pcap_file_list, "composition_read_thread")
+        self.thread_primer(global_parse_vars.pcap_file_list,
+                           "composition_read_thread")
 
     def tier_three_clicked(self):
-        global pcap_file_list
         self.clear_packet_field()
         self.stop_button.config(state=tk.NORMAL)
-        self.thread_primer(pcap_file_list, "socket_read")
+        self.thread_primer(global_parse_vars.pcap_file_list, "socket_read")
 
     # THREAD PRIMER takes a READ THREAD
     def thread_primer(self, packet_list, target_func_name):
@@ -145,6 +171,8 @@ class ReaderWindow(tk.Frame):
     # READ THREADS - These are passed in to thread_primer for .pcap analysis.
 
     def raw_read_thread(self, packet_list):
+        self.heading.config(text="Reading...")
+
         # THREAD A
         # Raw read, no analysis
         for pkt in packet_list:
@@ -164,14 +192,19 @@ class ReaderWindow(tk.Frame):
         self.heading.config(text="File Reading Complete!")
 
     def composition_read_thread(self, packet_list):
+        self.heading.config(text="Reading...")
+
         # THREAD B
         self.stop_button.config(state=tk.DISABLED)
-        global pcap_file_name
 
         ip_address_counter = Counter()
 
+        # Testing IPV6 support. Composition requires changing "is_private_ip()"
         for pkt in packet_list:
-            if 'IP' in pkt:
+            if 'IPv6' in pkt:
+                source_ip = pkt['IPv6'].src
+                ip_address_counter[source_ip] += 1
+            elif 'IP' in pkt:
                 source_ip = pkt['IP'].src
                 ip_address_counter[source_ip] += 1
 
@@ -190,20 +223,24 @@ class ReaderWindow(tk.Frame):
             ips_with_percentages, key=lambda x: x[1], reverse=True)
 
         initial_output = "Below are the percentages representing the composition of:\n" + \
-            pcap_file_name + '\n'
+            global_parse_vars.pcap_file_name + '\n'
         self.packet_field.insert(tk.END, initial_output)
         self.packet_field.see(tk.END)
 
         # Iterate list of tuples
         for entry in sorted_percentages:
             address, percentage = entry
+
+            # Attempt to translate current IP address.
             address = search_org(address)
             current_output = ("{}: {:.2f}%\n".format(address, percentage))
             # print(current_output)
             self.packet_field.insert(tk.END, str(current_output))
             self.packet_field.see(tk.END)
 
-        composition = public_private_composition(pcap_file_name)
+        composition = public_private_composition(
+            global_parse_vars.pcap_file_name)
+
         self.packet_field.insert(tk.END, '\n')
         self.packet_field.insert(tk.END, str(composition))
         self.packet_field.see(tk.END)
@@ -211,7 +248,12 @@ class ReaderWindow(tk.Frame):
 
     def socket_read(self, packet_list):
         # THREAD C
-        global pcap_file_name
+        self.heading.config(text="Reading...")
+
+        initial_output = "The speed at which CableOrca translates your IP addresses depends on how fast your computer can process the information.\n" + \
+            global_parse_vars.pcap_file_name + '\n'
+        self.packet_field.insert(tk.END, initial_output)
+        self.packet_field.see(tk.END)
 
         for pkt in packet_list:
             if self.thread_stop.is_set():
@@ -224,11 +266,13 @@ class ReaderWindow(tk.Frame):
                 self.packet_field.insert(tk.END, result + '\n')
                 self.packet_field.see(tk.END)
 
-        composition = public_private_composition(pcap_file_name)
+        composition = public_private_composition(
+            global_parse_vars.pcap_file_name)
+
         self.packet_field.insert(tk.END, '\n')
         self.packet_field.insert(tk.END, str(composition))
         self.packet_field.see(tk.END)
-        self.heading.config(text="[!] Socket Translate Concluded.")
+        self.heading.config(text="[!] Socket Translation Concluded.")
         self.stop_button.config(state=tk.DISABLED)
 
     # Thread and packet_field management.
@@ -238,197 +282,134 @@ class ReaderWindow(tk.Frame):
 
     def clear_packet_field(self):
         self.packet_field.delete("1.0", tk.END)
-        print("Text field wiped.")
 
 
-def is_private_ip(ip_address):
+def is_private_ip(ip):
     try:
-        # Split the IP address into its octets
-        octets = ip_address.split(".")
-
-        # Check if the IP address is in the private IP range
-        if (octets[0] == "10") or \
-           (octets[0] == "172" and int(octets[1]) >= 16 and int(octets[1]) <= 31) or \
-           (octets[0] == "192" and octets[1] == "168"):
-            return True
-        else:
-            return False
-    except:
-        print("Invalid IP address format.")
+        ip_obj = ipaddress.ip_address(ip)
+    except ValueError:
         return False
 
-
-def search(ip_address):
-    # Translates public IP addresses to their respective services.
-    try:
-        if not is_private_ip(ip_address):
-            ipwhois = IPWhois(ip_address)
-            results = ipwhois.lookup_rdap()
-
-            print(f"Organization: {results['network']['name']}")
-            print(f"Country: {results['network']['country']}")
-    except:
-        print("Not found")
-        pass
+    if ip_obj.is_private:
+        return True
+    else:
+        return False
 
 
 def search_org(ip_address):
     try:
-        # Private addresses cannot be resolved using whois.
-        if not is_private_ip(ip_address):
+        # Parse the input IP address and determine its type
+        ip = ipaddress.ip_address(ip_address)
+        is_private = ip.is_private
+
+        # Private addresses cannot be resolved using WHOIS
+        if not is_private:
+            # Use the IPWhois library to perform a WHOIS lookup and extract the network name
             ipwhois = IPWhois(ip_address)
             results = ipwhois.lookup_rdap()
-            return (f"{results['network']['name']}")
+            return results['network']['name']
         else:
-            # If passed in address is private, return private address
-            # Without this return, search_org returns the address as "None"
-            return ip_address
-    except:
-        return ip_address
-
-
-def display_pcap_composition():
-    try:
-        # Prompts for pcap file
-        # Performs analysis
-
-        selected_file = open_pcap()
-        rd_file = rdpcap(selected_file)
-
-        # Create a Counter object to store the IP addresses and their occurence count
-        ip_address_counter = Counter()
-        for packet in rd_file:
-            if 'IP' in packet:
-                source_ip = packet['IP'].src
-                ip_address_counter[source_ip] += 1
-
-        counter_sum = sum(ip_address_counter.values())
-
-        # Counter contains ip addresses and their occurences
-        # This list will contain tuples with ip addresses and their percentages.
-        ips_with_percentages = []
-
-        for address, occurences in ip_address_counter.items():
-            percentage = 100 * occurences / counter_sum  # Get percentage
-            ips_with_percentages.append(
-                (address, percentage))  # Build a list of tuples
-
-        sorted_percentages = sorted(
-            ips_with_percentages, key=lambda x: x[1], reverse=True)
-
-        # Lists which can be used for generating graphs.
-        ips_from_counter = []
-        percentages_from_counter = []
-
-        # Iterate list of tuples
-        for entry in sorted_percentages:
-            address, percentage = entry
-            address = search_org(address)
-
-            # Building lists that can be used to generate graphs.
-            ips_from_counter.append(address)
-            percentages_from_counter.append(percentage)
-
-            print("{}: {:.2f}%".format(address, percentage))
-
-        # Public to private address percentage
-        public_private_composition(selected_file)
-
-        # Display graphs
-        build_bc(ips_from_counter, percentages_from_counter)
-        build_pc(ips_from_counter, percentages_from_counter)
-
-    except:
-        print("Error, could not analyse .pcap composition.")
-        pass
+            # If the input IP address is private, return it without performing a lookup
+            return str(ip)
+    except ValueError:
+        # If the input is not a valid IP address, raise an error
+        raise ValueError(f"Invalid IP address: {ip_address}")
+    except Exception as e:
+        # If any other error occurs, raise a more informative error message
+        raise Exception(f"Error looking up network name for {ip_address}: {e}")
 
 
 def public_private_composition(pcap_file):
-    # Prompts for pcap file
-    # Performs analysis
-
-    # pcap_file = open_pcap()
-
+    # Please pass in the name of the .pcap file to get composition of.
     try:
-        # Read the PCAP file using rdpcap()
-        packets = rdpcap(pcap_file)
 
-        # Create a list to store the IP addresses
-        ip_addresses = []
+        # Performance + prevent file handle leaks.
+        with open(pcap_file, "rb") as pcap:
+            packets = rdpcap(pcap)
 
         # Extract the IP addresses from the packets
+        ip_addresses = []
         for packet in packets:
             if IP in packet:
                 ip_addresses.append(packet[IP].src)
                 ip_addresses.append(packet[IP].dst)
 
-        # Create a set to store unique IP addresses
+        # Check if all IP addresses are private or public
         unique_ips = set(ip_addresses)
+        all_private = all(is_private_ip(ip) for ip in unique_ips)
+        all_public = all(not is_private_ip(ip) for ip in unique_ips)
 
-        # Create variables to keep track of public and private IP addresses
-        public_ip = 0
-        private_ip = 0
+        if all_private:
+            return "This pcap file is 100% private IP addresses.\nPlease note that if you are analyzing an IPv6 pcap file and notice that all the addresses are labeled as 'private', it is likely that they are actually unique local addresses (ULA). Unlike IPv4, IPv6 does not have private addresses in the same way. "
+        elif all_public:
+            return "This pcap file is 100% public IP addresses."
+        else:
+            # Create variables to keep track of public and private IP addresses
+            public_ip = 0
+            private_ip = 0
 
-        # Check the type of each IP address and increment the appropriate counter
-        for ip in unique_ips:
-            if ip.startswith("10.") or ip.startswith("172.") or ip.startswith("192.168."):
-                private_ip += 1
+            # Check the type of each IP address and increment the appropriate counter
+            for ip in unique_ips:
+                if is_private_ip(ip):
+                    private_ip += 1
+                else:
+                    public_ip += 1
+
+            # Calculate the percentage of public and private IP addresses
+            total_ips = public_ip + private_ip
+            if total_ips > 0:
+                public_percent = (public_ip / total_ips) * 100
+                private_percent = (private_ip / total_ips) * 100
             else:
-                public_ip += 1
+                public_percent = 0
+                private_percent = 0
 
-        # Calculate the percentage of public and private IP addresses
-        total_ips = public_ip + private_ip
-        public_percent = (public_ip / total_ips) * 100
-        private_percent = (private_ip / total_ips) * 100
-
-        return (f"This pcap file is {'{:.2f}'.format(public_percent)}% public addresses\n"
-                f"This pcap file is {'{:.2f}'.format(private_percent)}% private addresses.")
+            return f"This pcap file is {public_percent:.2f}% public addresses\nThis pcap file is {private_percent:.2f}% private addresses."
 
     except FileNotFoundError:
-        return (f"Error: Could not find file {pcap_file}")
+        return f"Error: Could not find file {pcap_file}"
     except Exception as e:
-        return (f"An error occurred: {e}")
-
-
-# GLOBAL VARIABLES for "socket_translator"
-translated_ips = {}  # stores {ip: hostname}
-unknown_ips = set()  # stores ips that could not be resolved
+        return f"An error occurred: {e}"
 
 
 def socket_translator(packet):
     # Resolve IP addresses from a packet to their respective hostnames.
 
     # Extract relevant data from packet
-    src = packet.sprintf("%IP.src%")
-    dst = packet.sprintf("%IP.dst%")
+    if IP in packet:
+        src = packet.sprintf("%IP.src%")
+        dst = packet.sprintf("%IP.dst%")
+    elif IPv6 in packet:
+        src = packet.sprintf("%IPv6.src%")
+        dst = packet.sprintf("%IPv6.dst%")
+    else:
+        # Packet does not contain IP or IPv6 headers
+        return ""
 
-    # set for case where src or dst IS in unkown_ips
-    src_attempted_resolve = src
-    dst_attempted_resolve = dst
-
-    # Try to translate source to an ip address
-    if src not in unknown_ips:
-        if src not in translated_ips:
-            try:
-                src_attempted_resolve = socket.gethostbyaddr(
-                    src)[0]  # attempt resolve
-                translated_ips[src] = src_attempted_resolve
-            except socket.error:
-                unknown_ips.add(src)
-        else:
-            src_attempted_resolve = translated_ips[src]
-
-    # Try to translate destination to an ip address
-    if dst not in unknown_ips:
-        if dst not in translated_ips:
-            try:
-                dst_attempted_resolve = socket.gethostbyaddr(
-                    dst)[0]  # attempt resolve
-                translated_ips[dst] = dst_attempted_resolve
-            except socket.error:
-                unknown_ips.add(dst)
-        else:
-            dst_attempted_resolve = translated_ips[dst]
+    # Resolve source and destination IP addresses
+    src_attempted_resolve = resolve_ip(src)
+    dst_attempted_resolve = resolve_ip(dst)
 
     if src != "??" or dst != "??":
         return f"{src_attempted_resolve} -> {dst_attempted_resolve}"
+
+
+def resolve_ip(ip_address):
+    if ip_address in global_parse_vars.unknown_ips:
+        # IP address is already known to be unresolved
+        return ip_address
+    elif ip_address in global_parse_vars.translated_ips:
+        # IP address has already been resolved
+        return global_parse_vars.translated_ips[ip_address]
+    else:
+        # Attempt to resolve IP address to hostname
+        try:
+            hostname = socket.gethostbyaddr(ip_address)[0]
+            # Hostname resolved, add to global dict.
+            global_parse_vars.translated_ips[ip_address] = hostname
+            return hostname
+
+        # IP address could not be resolved. Add it to global set.
+        except socket.error:
+            global_parse_vars.unknown_ips.add(ip_address)
+            return ip_address

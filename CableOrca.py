@@ -1,14 +1,15 @@
 import tkinter as tk
 from PIL import Image, ImageTk
 
-from windows_library_check import *
+from arp_sweeper import *
+from file_manager import *
+from gui_engine import *
 from net_interfaces import *
 from net_speed_test import *
-from sniffer_engine import *
 from pcap_parser import *
-from file_manager import *
-from arp_sweeper import *
-from gui_engine import *
+from sniffer_engine import *
+from windows_library_check import *
+from wizard import *
 
 
 class GlobalDetails:
@@ -59,12 +60,13 @@ class MainWindow(tk.Tk):
         # They will not be downloaded if the exist in the directory already.
         icon_1 = "https://raw.githubusercontent.com/Thassanai546/CableOrca/main/Assets/CableOrcaIco.ico"
         icon_2 = "https://raw.githubusercontent.com/Thassanai546/CableOrca/main/Assets/CableOrcaIcon.png"
+        wizard_image = "https://raw.githubusercontent.com/Thassanai546/CableOrca/main/Assets/wizard.png"
 
-        # Use file_manager's downloader.
+        # Use file_manager's downloader to fetch three images
         if download_to_cableorca(icon_1):
             self.iconbitmap("CableOrca_files\CableOrcaIco.ico")
-
         download_to_cableorca(icon_2)
+        download_to_cableorca(wizard_image)
 
         # Create sidebar
         self.sidebar = tk.Frame(self, bg="#34495e", width=100, height=500)
@@ -88,7 +90,7 @@ class MainWindow(tk.Tk):
             self.sidebar, width=17, text="Analyse .pcap File", command=lambda: self.change_window(Window4))
         self.button4.pack(pady=3)
         self.button6 = tk.Button(
-            self.sidebar, width=17, text="Button 6", command=lambda: self.change_window(Window6))
+            self.sidebar, width=17, text="Wizard", command=lambda: self.change_window(Window6))
         self.button6.pack(pady=3)
 
         # Create main window container
@@ -308,9 +310,9 @@ class Window3(tk.Frame):
         dev_discover_font = "Calibri"
 
         tk.Label(self, justify="left", text="Network Device Discovery",
-                 font=(dev_discover_font, 14)).pack()
+                 font=(dev_discover_font, 18)).pack()
         message = tk.Label(self, justify="left", text="The speed at which CableOrca discovers devices depends on your network.", font=(
-            dev_discover_font, 12))
+            dev_discover_font, 16))
         message.pack()
 
         def start_arp_sweep():
@@ -387,11 +389,11 @@ class Window5(tk.Frame):
 
         # Title of current window.
         title = tk.Label(self, justify="left", text="Network Speedtest",
-                         font=(speed_test_font, 14))
+                         font=(speed_test_font, 18))
         title.pack(pady=5)
 
         message = tk.Label(self, justify="left", text="The speed at which CableOrca tests your upload and download speed depends on your network.", font=(
-            speed_test_font, 13))
+            speed_test_font, 14))
         message.pack()
 
         # Public IP address is discovered once per session.
@@ -454,7 +456,50 @@ class Window6(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
 
-        tk.Label(self, text="This is window 6").pack()
+        wizard_font = "Calibri"
+
+        # Attempt to display the wizard image
+        try:
+            image = Image.open("CableOrca_files\wizard.png")
+            image = image.resize((230, 230), Image.LANCZOS)
+            self.photo = ImageTk.PhotoImage(image)
+            tk.Label(self, image=self.photo).pack(pady=3, padx=3)
+
+            wizard_says = tk.Label(self, justify="left", text="Wizard says: ", font=(
+                wizard_font, 13))
+            wizard_says.pack()
+        except Exception as ex:
+            print(ex)
+            pass
+
+        # Create a text area and pack it into the text frame
+        # This introduces the user
+        self.welcome_text_area = tk.Text(self, height=5, width=60,
+                                         wrap="word", font=("Arial", 14))
+        self.welcome_text_area .pack(pady=5, padx=5)
+
+        # Insert the introduction text into the widget
+        intro_text = "Greetings, my friend! I'm "
+        self.welcome_text_area .insert(tk.END, intro_text)
+        self.welcome_text_area .insert(tk.END, "Bob the Wizard", "bold")
+        self.welcome_text_area .insert(
+            tk.END, ", and I'm here to help you troubleshoot your network using CableOrca Packet Sniffer. Network troubleshooting can be a daunting task, but fear not, for I am here to make it easy and user-friendly!")
+
+        # Bob's name is "bold" and purple.
+        self.welcome_text_area .tag_configure("bold", font=(
+            "Arial", 14, "bold"), foreground="purple")
+
+        self.welcome_text_area .config(state=tk.DISABLED)
+
+        # Start button
+        self.start_button = tk.Button(
+            self, font=(wizard_font, 12), text="Start", width=15, command=self.start_wiz, pady=1, bg="#5fe884")
+        self.start_button.pack(pady=15)
+
+    def start_wiz(self):
+        self.start_button.pack_forget()
+        self.welcome_text_area.pack_forget()
+        DiagnosticWizard(self)
 
 
 app = MainWindow()
