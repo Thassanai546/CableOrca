@@ -17,9 +17,5 @@ One of the key benefits of CableOrca is its simplicity. Unlike other tools that 
   <img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" height=30 />
 </div>
 
-# Screenshots
-
-<img src="https://user-images.githubusercontent.com/72495327/224557215-acfe10fe-7f7f-4acf-9f1f-f80d32be2056.png" width=750/>
-<img src="https://user-images.githubusercontent.com/72495327/224557232-ed06c716-3830-419b-8dd7-5b7056672c65.png" width=750/>
-<img src="https://user-images.githubusercontent.com/72495327/224557262-e831e3a0-9b2d-45dd-8303-0dafd087931c.png" width=750/>
-<img src="https://user-images.githubusercontent.com/72495327/224567220-c17ad50c-99bb-4866-8ab2-3736a0328556.png" width=750/>
+##
+Thassanai - 2023
