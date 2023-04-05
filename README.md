@@ -16,6 +16,10 @@ One of the key benefits of CableOrca is its simplicity. Unlike other tools that 
   <img src="https://img.shields.io/badge/Visual_Studio_Code-0078D4?style=for-the-badge&logo=visual%20studio%20code&logoColor=white" height=30 />
   <img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" height=30 />
 </div>
+<br>
+
+### Powered by <a href="https://scapy.readthedocs.io/en/latest/index.html">Scapy</a> !
+
 
 ##
 Thassanai - 2023
