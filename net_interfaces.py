@@ -3,44 +3,19 @@ import socket
 import requests
 
 
-def print_interfaces():
-    output = []
-    try:
-        output.append("Interfaces on this device:\n")
-        for net_int in get_working_ifaces():
-            output.append("ID:[ %d ] [Name: %s ]\n" %
-                          (net_int.index, net_int.name))
-        output.append("ID:[ 0 ] = All Interfaces")
-    except:
-        output.append("Could not get device interfaces.")
-    return output
-
-
-def interfaces_to_index_list():  # TEMP, MAY NO LONGER BE NEEDED.
-    # Return a list of indexes of interfaces on this device
-    interface_list = []
-
-    for interface in get_working_ifaces():
-        current_interface_index = interface.index
-        interface_list.append(current_interface_index)
-
-    interface_list.append(0)  # For option "all interfaces"
-    return interface_list
-
-
 def interfaces_to_name_list():
     # Return a list of names of interfaces on the device.
     # [!] Useful for scanning all interfaces using Scapy
     interface_list = []
     for net_int in get_working_ifaces():
         interface_list.append(net_int.name)  # Names such as "Ethernet"
-    interface_list.append("All Interfaces.")
+    interface_list.append("ALL INTERFACES")
     return interface_list
 
 
 def get_current_device():
     # Get hostname and ip address
-    output = ""
+    output = []
     try:
         device_interface = conf.iface.name
         device_ip = get_if_addr(conf.iface)
@@ -56,30 +31,45 @@ def get_current_device():
 
         device_name = socket.gethostbyaddr(socket.gethostname())[0]
         # print("[Your address:",device_ip,"] - [Your device name:",device_name,']')  # This device IP address
-        output += (
-            f"Your address: {device_ip}\nYour device name: {device_name}\nYour network interface: {device_interface}")
-        # print(socket.gethostbyaddr(get_if_addr(conf.iface))[0])
+        output.append("Your address: " + device_ip)
+        output.append("Your device name: " + device_name)
+        output.append("Your network interface: " + device_interface)
     except:
-        output = "Could not get device info."
+        output.append("Could not get device info.")
     return output
 
 
-def get_public_ip():
-    # Get the public ip address of the current device.
-    # If we can't reach ipify, try socket.
+def get_default_interface():
     try:
-        print("Fetching Public IP from ipify.org...")
-        response = requests.get('https://api.ipify.org')
-        return response.text
+        default_int = conf.iface.name
+        return default_int
+    except Scapy_Exception as ex:
+        print(f"Error getting default interface: {ex}")
+        return None
+
+
+def get_public_ip():
+    # Will try to fetch public IP address of the current device
+    # If public IP address cannot be fetched, public IP address is returned
+    try:
+        print("Fetching Public IP address from AWS...")
+        response = requests.get('https://checkip.amazonaws.com').text.strip()
+        return response
 
     except requests.exceptions.RequestException:
-        skt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        skt.connect(('8.8.8.8', 80))  # Try google DNS.
-        return skt.getsockname()[0]
+        try:
+            print("AWS Cannot be Reached. Fetching Public IP from ipify.org...")
+            response = requests.get('https://api.ipify.org').text.strip()
+            return response
+
+        except requests.exceptions.RequestException:
+            skt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            skt.connect(('8.8.8.8', 80))  # Try google DNS.
+            return skt.getsockname()[0]
 
     except Exception as ex:
         print(ex)
-        return "Error"
+        return "Error, could not fetch public IP address at this time."
 
 
 def check_internet():

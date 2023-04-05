@@ -1,5 +1,5 @@
 from scapy.all import *
-from scapy.all import IP
+from scapy.all import IP, TCP, UDP
 import tkinter as tk
 
 from net_interfaces import *
@@ -7,20 +7,23 @@ from file_manager import *
 
 
 class SnifferWindow(tk.Frame):
-    def __init__(self, parent, duration, interface):
+    def __init__(self, parent, duration, interface, view_bool):
         super().__init__(parent)
         self.pack()
 
+        # SnifferWindow takes a duration and an interface as arguments
+        self.duration = duration
+        self.interface = interface
+        self.view_bool = view_bool
+        self.device_ip = get_if_addr('default')
+
         # Packet view frame contains a live packet analysis window
-        # and a "Save Results" button.
         self.packet_view_frame = tk.Frame(self)
         self.packet_view_frame.pack()
 
-        # Building the live packet output display
-        # It uses consolas font. Note that changing font affects width and height
-        # values of the live packet output field.
-        self.packet_field = tk.Text(self.packet_view_frame, height=17, width=125, font=(
-            "consolas", 10), pady=10)  # WIDTH and HEIGHT set here
+        # Building the live packet output display with a vertical scrollbar
+        self.packet_field = tk.Text(self.packet_view_frame, height=17,
+                                    width=110, font=12, pady=10, padx=10)  # WIDTH and HEIGHT set here
         self.packet_field.pack(side=tk.LEFT)
 
         self.scrollbar = tk.Scrollbar(
@@ -29,23 +32,22 @@ class SnifferWindow(tk.Frame):
 
         self.packet_field.config(yscrollcommand=self.scrollbar.set)
 
-        # Add a "Stop" button to the GUI, to stop network analysis.
+        # Analysis stop button
         self.stop_button = tk.Button(
-            self, text="Stop Analysis", command=self.stop_sniffing, width=20, bg="red", font=("Calibri", 11))
+            self, text="Stop Analysis", command=self.stop_sniffing, width=20, bg="red", font=("Calibri", 12))
         self.stop_button.pack(pady=10)
 
-        # Duration and interface from "def init"
-        self.duration = duration
-        self.interface = interface
-
-        # All Interfaces = "None" as an interface for scapy sniff() function.
-        if self.interface == "All Interfaces.":
+        """
+        All Interfaces = "None" as an interface for scapy sniff() function.
+        Defined in "net_interfaces.py" -> interfaces_to_name_list()
+        """
+        if self.interface == "ALL INTERFACES":
             self.interface = interface = None  # None sniffs all interfaces in scapy sniff()
 
-        # Starting a new thread as scapy sniff() blocks execution until
-        # sniff() is finished.
-        # Live output of packets requires the use of a thread
-        # so that GUI remains active.
+        """
+        Starting a new thread as scapy sniff() blocks execution until sniff() is finished.
+        Live output of packets on to GUI requires the use of a thread so that GUI remains active.
+        """
         self.stop_sniff = threading.Event()
         self.sniff_thread = threading.Thread(target=self.initiate_sniffer)
         self.sniff_thread.start()
@@ -56,46 +58,93 @@ class SnifferWindow(tk.Frame):
         self.stop_sniff.set()
 
     def initiate_sniffer(self):
-        # Initiate sniffer calls Scapy's sniff() function. Sniff() takes "display_packet" function
-        # as an argument. This function is called on each packet that Scapy captures.
+        """
+        Initiate_sniffer is run in it's own thread.
+        This thread is controlled by "stop_sniffing"
+        """
 
+        # Default packet display option
         def display_packet(packet):
             # Take a packet and append it to the text field on the GUI.
             self.packet_field.insert(tk.END, packet.summary() + "\n")
             self.packet_field.update_idletasks()
             self.packet_field.see('end')
 
-        try:
+        # Alternate method of displaying live packets
+        # This is set by the checkbox on CableOrca.py's frame
+        def display_compact_packet(packet):
+            # Take a packet and append it to the text field on the GUI.
+            self.packet_field.insert(tk.END, clean(packet) + "\n")
+            self.packet_field.update_idletasks()
+            self.packet_field.see('end')
+
+        def post_sniff():
+
             def call_pcap_saver():
                 # called by "save_button"
                 save_result = ""
                 if save_to_pcap(captured_packets):  # Call file_manager.py function
-                    save_result = ".PCAP File Saved"
+                    save_result = "Capture File Saved!"
                 else:
-                    save_result = ".PCAP Not File Saved"
+                    save_result = "Capture File Not Saved"
 
-                message.config(text=save_result)
+                # Display save result and clear message about packet capture file saving
+                msg1.config(text=save_result)
+                msg2.config(text="")
 
-            # iface = interface, prn = processing done for each packet, timeout = duration of analysis,
-            # store = true grants ability to save capture to a .pcap file
-            # stop_filter = stop thread that is running sniff function. Stopping sniff jumps to "create_pcap_saver_frame".
-            captured_packets = sniff(iface=self.interface, prn=display_packet, store=True,
-                         timeout=self.duration, stop_filter=lambda p: self.stop_sniff.is_set())
+            # Executed after Scapy sniff() commences
+
+            # spawn save button
+            # save_to_pcap function from file_manager.py used.
+            self.save_button = tk.Button(self, text="Save",
+                                         command=call_pcap_saver, width=20, font=("Calibri", 12), bg="white")
+
+            if len(captured_packets) == 0:
+                msg_text = "Packet Sniffing Complete. No packets were captured on this interface."
+                packet_field_text = "CableOrca did not detect any network activity on this interface."
+
+                self.packet_field.config(state=tk.NORMAL)
+                self.packet_field.insert(tk.END, packet_field_text)
+                self.packet_field.update_idletasks()
+                self.packet_field.see('end')
+                self.packet_field.config(state=tk.DISABLED)
+
+                self.save_button.config(
+                    text="No Packets To Save", state=tk.DISABLED)
+            else:
+                msg_text = "Packet Sniffing Complete."
 
             # Prevent the user from accidently typing inisde the packet output field.
             self.packet_field.config(state="disabled")
-
             self.stop_button.config(state="disabled", bg="grey")
 
-            # Packet sniffing has ended, display message and save button.
-            message = tk.Label(self, text="Packet Sniffing Complete.",
-                               font=("Calibri", 13), pady=5)
-            message.pack()
+            msg1 = tk.Label(self, text=msg_text,
+                            font=("Calibri", 16), pady=5)
+            msg1.pack()
 
-            # save_to_pcap function from file_manager.py used.
-            save_button = tk.Button(self, text="Click here to save file",
-                                    command=call_pcap_saver, width=20, font=("Calibri", 11), bg="white")
-            save_button.pack(pady=10)
+            msg2 = tk.Label(self, text="You can save a file called a 'Packet Capture File' which records network traffic.\nThis file can then be looked at more closely using CableOrca, or another program that you prefer.\nThis will give you a better understanding of what is happening with your internet connection.",
+                            font=("Calibri", 16), pady=5, justify="left")
+            msg2.pack()
+
+            self.save_button.pack(pady=10)
+
+        try:
+            """
+            Initiate Sniffer
+
+            PRN = function run for each packet detected
+            store = allow packet capture file saving
+            stop_filter = anonymous function that checks if "self.stop_sniff" is set
+            """
+            if not self.view_bool:
+                captured_packets = sniff(iface=self.interface, prn=display_packet, store=True,
+                                         timeout=self.duration, stop_filter=lambda p: self.stop_sniff.is_set())
+            else:
+                captured_packets = sniff(iface=self.interface, prn=display_compact_packet, store=True,
+                                         timeout=self.duration, stop_filter=lambda p: self.stop_sniff.is_set())
+
+            # After Scapy "sniff()" has ended
+            post_sniff()
 
         # Errors are displayed on the GUI inside the packet_field text area.
         except OSError as ex:
@@ -111,94 +160,40 @@ class SnifferWindow(tk.Frame):
             self.packet_field.see('end')
 
 
-def configure_sniff():
-    # Lists all interfaces
-    # Asks for interface ID
-    # Asks for analysis duration in seconds.
-    # Let's user configure .pcap file for data captured.
-
-    # display interfaces to console
-    print_interfaces()
-
-    # user options
-    option = int(input("Enter interface ID:"))
-
-    try:
-        duration = int(
-            input("Enter the duration of the network scan (in seconds):"))
-    except:
-        duration = 10
-
-    # Start network analysis
-    if option in interfaces_to_index_list():
-        if option == 0:
-            print("sniffing on all...")
-            # note to thass: store=True allowed me to SAVE AND READ pcap files made by this program.
-            # iface = list of all available interfaces.
-            pkts = sniff(iface=interfaces_to_name_list(),
-                         prn=clean, store=True, timeout=duration)
-        else:
-            # Interface index is translated to device name, eg "Ethernet"
-            pkts = sniff(iface=dev_from_index(option),
-                         prn=clean, store=True, timeout=duration)
-    else:
-        print("Invalid interface, choose an ID from the list above")
-
-    # PCAP file management
-    filename = create_pcap()
-    append(filename, pkts)
-
-
-def sniff_with(function):
-    # Lists all interfaces
-    # Asks for interface ID
-    # Asks for analysis duration in seconds.
-    # Let's user configure .pcap file for data captured.
-
-    # display interfaces to console
-    print_interfaces()
-
-    # user options
-    option = int(input("Enter interface ID:"))
-
-    try:
-        duration = int(
-            input("Enter the duration of the network scan (in seconds):"))
-    except:
-        duration = 10
-
-    # Start network analysis
-    if option in interfaces_to_index_list():
-        if option == 0:
-            print("sniffing on all...")
-            # note to thass: store=True allowed me to SAVE AND READ pcap files made by this program.
-            # iface = list of all available interfaces.
-            pkts = sniff(iface=interfaces_to_name_list(),
-                         prn=function, store=True, timeout=duration)
-        else:
-            # Interface index is translated to device name, eg "Ethernet"
-            pkts = sniff(iface=dev_from_index(option),
-                         prn=function, store=True, timeout=duration)
-    else:
-        print("Invalid interface, choose an ID from the list above")
-
-
 # Packet parsing and output formats.
 
-def handler(packet):
-    # Packet summary for each captured packet.
-    return packet.summary()
-
-
 def clean(packet):
-    # Nicely formatted output for packet capture.
-    try:
-        src_mac = packet.src
-        dst_mac = packet.dst
-        src_ip = packet[IP].src
-        dst_ip = packet[IP].dst
-        protocol = packet[IP].proto
-        return (f'Time: {packet.time}\nSource MAC: {src_mac}\nDestination MAC: {dst_mac}\nSource IP: {src_ip}\nDestination IP: {dst_ip}\nProtocol: {protocol}\n')
-    except:
-        # If we fail to parse a packet, don't attempt to display that packet.
-        return ("")
+
+    from pcap_parser import is_private_ip
+
+    """
+    Takes a packet and returns a user-friendly summary of that packet as a string,
+    including whether the packet is from the Internet or from the local network.
+    """
+    pkt_summary = ""
+
+    # Check if the packet is an IP packet
+    if IP in packet:
+        # Check if the source IP is in the local network range
+        if is_private_ip(IP):
+            pkt_summary += "Packet is from the local network.\n"
+        else:
+            pkt_summary += "Packet is from the Internet.\n"
+
+        pkt_summary += "Source IP: " + str(packet[IP].src) + "\n"
+        pkt_summary += "Destination IP: " + str(packet[IP].dst) + "\n"
+        pkt_summary += "Protocol: " + str(packet[IP].proto) + "\n"
+    else:
+        pkt_summary += "Packet is not an IP packet.\n"
+
+    # Check if the packet is a TCP packet
+    if TCP in packet:
+        pkt_summary += "Source Port: " + str(packet[TCP].sport) + "\n"
+        pkt_summary += "Destination Port: " + str(packet[TCP].dport) + "\n"
+    elif UDP in packet:
+        pkt_summary += "Source Port: " + str(packet[UDP].sport) + "\n"
+        pkt_summary += "Destination Port: " + str(packet[UDP].dport) + "\n"
+    else:
+        pkt_summary += "Packet is not a TCP or UDP packet.\n"
+
+    return pkt_summary

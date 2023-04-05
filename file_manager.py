@@ -1,8 +1,9 @@
-from tkinter import filedialog
-from scapy.all import *
-import tkinter as tk
-import requests
 import os
+import tkinter as tk
+from tkinter import filedialog
+
+import requests
+from scapy.all import *
 
 # When opening and saving files, they are placed in, or read from a directory called "CableOrca_files"
 CableOrcaDirectory = "CableOrca_files"
@@ -19,10 +20,12 @@ def create_directory():
 
 
 def save_to_pcap(pkts):
-    # Used by create_pcap_saver_frame
-    # Uses filedialog to save to system.
-    # Only pcap files are allowed.
-    # pkts must be provided for wrcap function!
+    """
+    Used by create_pcap_saver_frame
+    Uses filedialog to save to system.
+    Only pcap files are allowed.
+    pkts must be provided for wrcap function!
+    """
     try:
         file_path = filedialog.asksaveasfilename(
             defaultextension=".pcap", filetypes=[("PCAP files", "*.pcap")])
@@ -84,28 +87,6 @@ def open_pcap():
         return None
 
 
-def create_pcap():
-    try:
-        created_file = input("Enter the name of the pcap file:")
-
-        if not created_file.endswith('.pcap'):
-            created_file += '.pcap'
-
-        create_directory()
-
-        file_path = os.path.join(CableOrcaDirectory, created_file)
-
-        if os.path.isfile(file_path):
-            print(
-                f'The file {file_path} already exists in directory {CableOrcaDirectory}')
-
-        return file_path
-
-    except Exception as e:
-        print("An error occurred while trying to create the pcap file:", e)
-        return None
-
-
 def append(filename, pkts):
     # Filename excpected to include specified directory.
     try:
@@ -127,33 +108,6 @@ def open_and_read_pcap(function):  # To be bound with "socket_translator"
             function(pkt)
     except Exception as message:
         print(f"An error occurred: {message}")
-
-
-def directory_search(extension, directory):
-    try:
-        # Ensure the directory exists
-        if not os.path.isdir(directory):
-            print(f"The directory '{directory}' does not exist.")
-            return
-
-        # Get all files in the directory
-        files = os.listdir(directory)
-        matching_files = []
-        for file in files:
-            # Check if file has the specified extension
-            if file.endswith(extension):
-                matching_files.append(file)
-
-        # Print all matching files
-        if matching_files:
-            print(
-                f"Found {len(matching_files)} file(s) with extension {extension} in {directory}:")
-            for file in matching_files:
-                print(f"-> {file}")
-        else:
-            print(f"No files with extension {extension} found in {directory}.")
-    except Exception as e:
-        print(f"An error occurred while searching for files: {e}.")
 
 
 def download_to_cableorca(url):
@@ -178,12 +132,17 @@ def download_to_cableorca(url):
 
 
 def save_image(url):
-    # This function is different to download_to_cableorca due to the fact that
-    # It allows a user to choose the destination of the image downloaded.
-    # Returns True or False.
+    """
+    This function is different to download_to_cableorca due to the fact that
+    It allows a user to choose the destination of the image downloaded.
 
-    # Open a file dialog to select the image file
+    Used when saving images from speedtest
+
+    Returns True or False.
+    """
+
     try:
+        # Open a file dialog to select the image file
         file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[
                                                  ("PNG", "*.png"), ("JPEG", "*.jpg"), ("All Files", "*.*")])
 
@@ -205,7 +164,7 @@ def read_pcap():
         # Pass that pcap file to "rdpcap()"
         # Return false if nothing selected.
         pcap_file = tk.filedialog.askopenfilename(
-            filetypes=[("PCAP files", "*.pcap")])
+            filetypes=[("PCAP files", "*.pcap *.pcapng")])
 
         if not pcap_file:
             return False  # User clicked "Cancel" or didn't select a file

@@ -5,7 +5,7 @@ from ipwhois import IPWhois
 import socket
 import tkinter as tk
 from collections import Counter
-from scapy.all import IP, IPv6
+from scapy.all import TCP, UDP, ICMP, IP, IPv6
 from scapy.all import *
 
 from file_manager import *
@@ -21,11 +21,25 @@ class GlobalParsingVars:
         self.translated_ips = {}  # stores {ip: hostname}
         self.unknown_ips = set()  # stores ips that could not be resolved
 
+        # Initialize PCAP file protocol counters
+        self.tcp_count = 0
+        self.udp_count = 0
+        self.icmp_count = 0
+
+    def print_protocol_counters(self):
+        print("Protocol counters:")
+        print(f"TCP: {self.tcp_count}")
+        print(f"UDP: {self.udp_count}")
+        print(f"ICMP: {self.icmp_count}")
+
     def reset(self):
         self.pcap_file_name = None
         self.pcap_file_list = None
         self.translated_ips = {}
         self.unknown_ips = set()
+        self.tcp_count = 0
+        self.udp_count = 0
+        self.icmp_count = 0
         print("GlobalParsingVars has been reset.")
 
 
@@ -41,8 +55,8 @@ class ReaderWindow(tk.Frame):
 
         # Heading
         self.heading = tk.Label(
-            self, text="Please select a PCAP file to read.", font=(pcap_reading_window_font, 16))
-        self.heading.pack()
+            self, text="Welcome! Please select a PCAP file to read.", font=(pcap_reading_window_font, 18))
+        self.heading.pack(pady=5)
 
         # Button frame
         self.button_frame = tk.Frame(self)
@@ -82,10 +96,15 @@ class ReaderWindow(tk.Frame):
         self.packet_read_frame = tk.Frame(self)
         self.packet_read_frame.pack()
 
-        # Packet view text area
-        self.packet_field = tk.Text(self.packet_read_frame, wrap="word", height=17, width=130, font=(
-            "consolas", 10), pady=10)  # WIDTH and HEIGHT set here
-        self.packet_field.pack(side=tk.LEFT)
+        # Packet reading text area
+        self.packet_field = tk.Text(self.packet_read_frame, wrap="word", height=18,
+                                    width=100, font=("calibri", 14), pady=12, padx=12)  # WIDTH and HEIGHT set here
+        self.packet_field.pack(side=tk.LEFT, pady=5)
+
+        msg = "A .pcap file is a file format that stores network traffic data captured by packet sniffers. It contains a record of every packet that was captured by the sniffer, along with details like the source and destination IP addresses, the protocol used, and the time the packet was sent and received."
+        self.packet_field.insert(tk.END, msg)
+        self.packet_field.insert(tk.END, '\n')
+        self.packet_field.see(tk.END)
 
         self.scrollbar = tk.Scrollbar(
             self.packet_read_frame, command=self.packet_field.yview)
@@ -100,6 +119,17 @@ class ReaderWindow(tk.Frame):
 
         # No need to stop, if nothing is currently running
         self.stop_button.config(state=tk.DISABLED)
+
+        # Disable packet field
+        self.packet_field.config(state=tk.DISABLED)
+
+        # Explanation labels
+        tk.Label(self, text="Tier 1 = Raw Read", font=(
+            pcap_reading_window_font, 16)).pack()
+        tk.Label(self, text="Tier 2 = Traffic Percentage Analysis",
+                 font=(pcap_reading_window_font, 16)).pack()
+        tk.Label(self, text="Tier 3 = Attempt to Translate Each IP Address", font=(
+            pcap_reading_window_font, 16)).pack()
 
     def select_file_clicked(self):
         # Select file button clicked.
@@ -122,6 +152,7 @@ class ReaderWindow(tk.Frame):
             self.tier_one.config(state=tk.NORMAL)
             self.tier_two.config(state=tk.NORMAL)
             self.tier_three.config(state=tk.NORMAL)
+
         except FileNotFoundError:
             # Handle the case where the user did not select a file.
             read_info = "No File Selected."
@@ -139,23 +170,23 @@ class ReaderWindow(tk.Frame):
     # Call thread primer with specified thread name.
 
     def tier_one_clicked(self):
-        self.clear_packet_field()
         self.stop_button.config(state=tk.NORMAL)
         self.thread_primer(global_parse_vars.pcap_file_list, "raw_read_thread")
 
     def tier_two_clicked(self):
-        self.clear_packet_field()
         self.stop_button.config(state=tk.NORMAL)
         self.thread_primer(global_parse_vars.pcap_file_list,
                            "composition_read_thread")
 
     def tier_three_clicked(self):
-        self.clear_packet_field()
         self.stop_button.config(state=tk.NORMAL)
         self.thread_primer(global_parse_vars.pcap_file_list, "socket_read")
 
     # THREAD PRIMER takes a READ THREAD
     def thread_primer(self, packet_list, target_func_name):
+        self.packet_field.config(state=tk.NORMAL)
+        self.clear_packet_field()
+
         self.packet_field.delete("1.0", tk.END)
         self.thread_stop = threading.Event()
         target_func = getattr(self, target_func_name)
@@ -223,7 +254,7 @@ class ReaderWindow(tk.Frame):
             ips_with_percentages, key=lambda x: x[1], reverse=True)
 
         initial_output = "Below are the percentages representing the composition of:\n" + \
-            global_parse_vars.pcap_file_name + '\n'
+            global_parse_vars.pcap_file_name + '\n\n'
         self.packet_field.insert(tk.END, initial_output)
         self.packet_field.see(tk.END)
 
@@ -232,7 +263,12 @@ class ReaderWindow(tk.Frame):
             address, percentage = entry
 
             # Attempt to translate current IP address.
-            address = search_org(address)
+            try:
+                address = search_org(address)
+            except:
+                print("Error translating:", address, "skipping.")
+                pass
+
             current_output = ("{}: {:.2f}%\n".format(address, percentage))
             # print(current_output)
             self.packet_field.insert(tk.END, str(current_output))
@@ -284,13 +320,27 @@ class ReaderWindow(tk.Frame):
         self.packet_field.delete("1.0", tk.END)
 
 
+def set_protocol_count(file_name):
+    # Open the pcap file
+    pkts = rdpcap(file_name)
+    # Loop through each packet and count the number of TCP, UDP, and ICMP packets
+    for packet in pkts:
+        if packet.haslayer(TCP):
+            global_parse_vars.tcp_count += 1
+        elif packet.haslayer(UDP):
+            global_parse_vars.udp_count += 1
+        elif packet.haslayer(ICMP):
+            global_parse_vars.icmp_count += 1
+
+
 def is_private_ip(ip):
+    # Utilised in public_private_composition()
     try:
-        ip_obj = ipaddress.ip_address(ip)
+        ip_addr = ipaddress.ip_address(ip)
     except ValueError:
         return False
 
-    if ip_obj.is_private:
+    if ip_addr.is_private:
         return True
     else:
         return False
@@ -313,10 +363,12 @@ def search_org(ip_address):
             return str(ip)
     except ValueError:
         # If the input is not a valid IP address, raise an error
-        raise ValueError(f"Invalid IP address: {ip_address}")
+        print(f"Invalid IP address: {ip_address}")
+        return str(ip)
     except Exception as e:
         # If any other error occurs, raise a more informative error message
-        raise Exception(f"Error looking up network name for {ip_address}: {e}")
+        print(f"Error looking up network name for {ip_address}: {e}")
+        return str(ip)
 
 
 def public_private_composition(pcap_file):

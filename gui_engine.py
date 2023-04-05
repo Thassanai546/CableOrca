@@ -1,5 +1,4 @@
 import tkinter as tk
-from file_manager import save_to_pcap
 
 
 class ScrollableFrame(tk.Frame):
@@ -50,17 +49,21 @@ def create_scrollable_radiobuttons(parent, items):
     # Takes a parent and a list.
     # Builds and packs radio buttons using specified list.
     # This is used to build a radio button list of network interfaces that the user can choose to sniff the network.
+
+    radio_button_font = "Calibri"
+
     try:
         if not items:
             raise ValueError("The 'items' list cannot be empty")
 
-        # eg. width = 400, height = 200
-        frame = ScrollableFrame(parent, 590, 300)
+        # Set width and height of radio button frame
+        frame = ScrollableFrame(parent, 650, 300)
         variable = tk.StringVar()
 
+        # Font of radio buttons can be set here
         for item in items:
             current_button = tk.Radiobutton(frame.frame, text=item, font=(
-                "Arial", 11), variable=variable, value=item)
+                radio_button_font, 16), variable=variable, value=item)
             current_button.pack(anchor='w')
 
         frame.pack()
