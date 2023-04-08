@@ -105,7 +105,7 @@ class DiagnosticWizard(tk.Frame):
             self.yes_button.pack_forget()
             self.no_button.pack_forget()
 
-            GOODBYE_MESSAGE = "Alright, please visit again if you have any more questions!\n\nSummary:"
+            GOODBYE_MESSAGE = "Alright, please visit again if you have any more questions!\n\n"
 
             self.question_text.config(state=tk.NORMAL)
             self.question_text.delete("1.0", tk.END)
