@@ -1,6 +1,10 @@
+# Standard imports
 import tkinter as tk
+
+# Third-party imports
 from PIL import Image, ImageTk
 
+# Local imports
 from arp_sweeper import *
 from file_manager import *
 from gui_engine import *
@@ -22,10 +26,6 @@ class GlobalDetails:
         self.library_check = False
         self.has_pcap_libr = False
         self.internet_con = False
-
-    def reset(self):
-        # Potentially add button to reset all data.
-        self.__init__()
 
     def display_device_summary(self):
         summary = ""
@@ -167,9 +167,11 @@ class Window1(tk.Frame):
             tk.Label(self, fg="#cd5e6a", text="Internet Connection Disabled - Offline Mode Enabled",
                      justify="left", font=(home_font, 16), pady=5, padx=5).pack(pady=5)
 
-        # Try to search for pcap library on Windows.
-        # If it is not found, links npcap download page.
-        # Note! It is important to leave space on the homepage for this warning!
+        """
+        Try to search for pcap library on Windows.
+        If it is not found, links npcap download page.
+        Note! It is important to leave space on the homepage for this warning!
+        """
         try:
             if global_details.library_check is False:
                 # Search for a specified dll on the system.
@@ -192,7 +194,7 @@ class Window1(tk.Frame):
                 hyperlink = tk.Label(
                     self, font=(home_font, 14), text="Link to Download", fg="blue", cursor="hand2")
                 hyperlink.pack()
-                # Button-1 = mouseclick
+                # Button-1 = mouse click
                 hyperlink.bind(
                     "<Button-1>", lambda e: open_browser("https://npcap.com/#download"))
 
@@ -201,7 +203,7 @@ class Window1(tk.Frame):
                 self, text="Failed to search for pcap library on this operating system.").pack()
             print(ex)
 
-        # Link to GitHub at bottom of homescreen.
+        # Link to GitHub at bottom of home screen.
         git_hyperlink = tk.Label(
             self, text="\nVisit the GitHub", fg="blue", cursor="hand2", font=(home_font, 14))
         git_hyperlink.pack()
@@ -216,7 +218,7 @@ class Window2(tk.Frame):
         # Network analysis configuration window.
 
         # Used in duration text field.
-        # Uers should only enter time in seconds.
+        # Users should only enter time in seconds.
         def check_if_digit(value):
             return value == "" or value.isdigit()
 
@@ -259,7 +261,7 @@ class Window2(tk.Frame):
         self.info.pack()
 
         # Create a frame to hold d_label, duration_field, and confirm_button
-        # Allows for widgets to be placed beside eachother
+        # Allows for widgets to be placed beside each other
         scan_duration_frame = tk.Frame(
             self, bd=1, relief="ridge", padx=5, pady=5)
         scan_duration_frame.pack(pady=5)
@@ -316,7 +318,7 @@ class Window2(tk.Frame):
             print(
                 "Duration field is not an integer. Setting duration to default value of 60 seconds.")
 
-        # Remove all widgets on the "Configre Scan" page
+        # Remove all widgets on the "Configure Scan" page
         for widget in self.pack_slaves():
             widget.pack_forget()
 
@@ -324,7 +326,7 @@ class Window2(tk.Frame):
         user_message = f"Network analysis in started on [{chosen_interface}] Duration: [{duration}] seconds."
 
         user_message_label = tk.Label(self, text=user_message,
-                                      font=("calibri", 16))
+                                      font=("Calibri", 16))
         user_message_label.pack(pady=10)
 
         # Display live analysis window in place of all previous widgets.
@@ -474,17 +476,25 @@ class Window5(tk.Frame):
             self, text=device_name, font=(speed_test_font, 16))
         device_inf.pack()
 
-        # Check if public IP has been set yet
-        # If statement stops public address from being re-fetched, saving time
-        current_ip_addr = global_details.public_ip
-        if current_ip_addr == "":
+        """
+        If statement stops public address from being re-fetched every time this window is loaded.
+        If public IP was not found, re-loading the page will cause CableOrca to try fetch the address again.
+        Repeated internet lookups are prevented here to save time
+        """
+        if not global_details.public_ip:
             # If public IP not set, try to set it
-            current_ip_addr += "IP Address: "
-            current_ip_addr += get_public_ip()
-            global_details.public_ip = current_ip_addr
+            public_ip = get_public_ip()
+            if public_ip:
+                global_details.public_ip = public_ip
+                address_label_text = "Public IP: " + public_ip
+            else:
+                address_label_text = "Your public IP address could not be found at this time.\n" + \
+                    global_details.device_info[0]
+        else:
+            address_label_text = "Public IP: " + global_details.public_ip
 
         address_label = tk.Label(
-            self, text=current_ip_addr + '\n', font=(speed_test_font, 16))
+            self, text=address_label_text + '\n', font=(speed_test_font, 16))
         address_label.pack()
 
         # Configure speed_test_output window.

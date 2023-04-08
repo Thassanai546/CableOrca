@@ -52,24 +52,20 @@ def get_public_ip():
     # Will try to fetch public IP address of the current device
     # If public IP address cannot be fetched, public IP address is returned
     try:
+        # Try AWS
         print("Fetching Public IP address from AWS...")
         response = requests.get('https://checkip.amazonaws.com').text.strip()
         return response
 
     except requests.exceptions.RequestException:
         try:
-            print("AWS Cannot be Reached. Fetching Public IP from ipify.org...")
+            # AWS failed, try api.ipify
+            print("Fetching Public IP from ipify.org...")
             response = requests.get('https://api.ipify.org').text.strip()
             return response
 
         except requests.exceptions.RequestException:
-            skt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            skt.connect(('8.8.8.8', 80))  # Try google DNS.
-            return skt.getsockname()[0]
-
-    except Exception as ex:
-        print(ex)
-        return "Error, could not fetch public IP address at this time."
+            return ""
 
 
 def check_internet():
@@ -86,3 +82,26 @@ def check_internet():
             continue
 
     return False
+
+
+def get_wifi_networks():
+    """
+    Code by GT. on StackOverflow:
+    https://stackoverflow.com/questions/31868486/list-all-wireless-networks-python-for-pc
+
+    Attempts to build and return a list of available wifi networks
+    """
+    try:
+        r = subprocess.run(["netsh", "wlan", "show", "network"],
+                           capture_output=True, text=True, check=True).stdout
+        ls = r.split("\n")
+        ssids = [v.strip() for k, v in (p.split(':')
+                                        for p in ls if 'SSID' in p)]
+    except subprocess.CalledProcessError as e:
+        print(f"Error: {e}")
+        ssids = []
+    except Exception as e:
+        print(f"Error: {e}")
+        ssids = []
+
+    return ssids

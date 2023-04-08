@@ -92,10 +92,8 @@ class SnifferWindow(tk.Frame):
                 msg1.config(text=save_result)
                 msg2.config(text="")
 
-            # Executed after Scapy sniff() commences
-
-            # spawn save button
-            # save_to_pcap function from file_manager.py used.
+            # After sniff() commences, save button is spawned
+            # "file_manager" file save function is called
             self.save_button = tk.Button(self, text="Save",
                                          command=call_pcap_saver, width=20, font=("Calibri", 12), bg="white")
 
@@ -114,7 +112,7 @@ class SnifferWindow(tk.Frame):
             else:
                 msg_text = "Packet Sniffing Complete."
 
-            # Prevent the user from accidently typing inisde the packet output field.
+            # Prevent the user from accidentally typing inside the packet output field.
             self.packet_field.config(state="disabled")
             self.stop_button.config(state="disabled", bg="grey")
 

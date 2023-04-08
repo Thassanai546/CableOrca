@@ -17,7 +17,7 @@ class GlobalParsingVars:
         self.pcap_file_name = None
         self.pcap_file_list = None
 
-        # Socket Translator Vars, these are persistant for CableOrca's runtime.
+        # Socket Translator Vars, these are persistent for CableOrca's runtime.
         self.translated_ips = {}  # stores {ip: hostname}
         self.unknown_ips = set()  # stores ips that could not be resolved
 
@@ -67,12 +67,14 @@ class ReaderWindow(tk.Frame):
                                          command=self.select_file_clicked, font=(pcap_reading_window_font, 12), bg="#58d68d")
         self.select_file_btn.pack(side=tk.LEFT, pady=5, padx=5)
 
-        # Tiered buttons instructions:
-        # Command = self.specified_command
-        # A specified_command should follow the "clicked button"
-        # Guidelines specified below.
-        # For each button, enable it once a file has been selected
-        # This is done in select_file_clicked()
+        '''
+        Tiered buttons instructions:
+        Command = self.specified_command
+        A specified_command should follow the "clicked button"
+        Guidelines specified below.
+        For each button, enable it once a file has been selected
+        This is done in select_file_clicked()
+        '''
 
         # Tier 1
         self.tier_one = tk.Button(self.button_frame, text="Tier 1", width=15,
@@ -163,11 +165,13 @@ class ReaderWindow(tk.Frame):
             read_info = "No File Selected."
             self.heading.config(text=read_info)
 
-    # Writing button clicked events:
-    # Define global packet list var
-    # Clear existing packet field
-    # Enable the stop button
-    # Call thread primer with specified thread name.
+    '''
+    Writing button clicked events:
+    Define global packet list var
+    Clear existing packet field
+    Enable the stop button
+    Call thread primer with specified thread name.
+    '''
 
     def tier_one_clicked(self):
         self.stop_button.config(state=tk.NORMAL)
@@ -184,17 +188,22 @@ class ReaderWindow(tk.Frame):
 
     # THREAD PRIMER takes a READ THREAD
     def thread_primer(self, packet_list, target_func_name):
-        self.packet_field.config(state=tk.NORMAL)
-        self.clear_packet_field()
+        # Disable tier buttons
+        self.disable_buttons()
 
+        # Enable packet view text field
+        self.packet_field.config(state=tk.NORMAL)
         self.packet_field.delete("1.0", tk.END)
+
         self.thread_stop = threading.Event()
         target_func = getattr(self, target_func_name)
 
-        # Note args=(), from the thread constructor expects a tuple of arguments.
-        # (packet_list,) = tuple with one element
-        # (packet_list) = single argument
-        # This is why ',' is needed.
+        """
+        Note args=(), from the thread constructor expects a tuple of arguments.
+        (packet_list,) = tuple with one element
+        (packet_list) = single argument
+        This is why ',' is needed.
+        """
         read_thread = threading.Thread(
             target=target_func, args=(packet_list,))
         read_thread.start()
@@ -222,6 +231,8 @@ class ReaderWindow(tk.Frame):
         self.stop_button.config(state=tk.DISABLED)
         self.heading.config(text="File Reading Complete!")
 
+        self.enable_buttons()
+
     def composition_read_thread(self, packet_list):
         self.heading.config(text="Reading...")
 
@@ -241,12 +252,12 @@ class ReaderWindow(tk.Frame):
 
         counter_sum = sum(ip_address_counter.values())
 
-        # Counter contains ip addresses and their occurences
+        # Counter contains ip addresses and their occurrences
         # This list will contain tuples with ip addresses and their percentages.
         ips_with_percentages = []
 
-        for address, occurences in ip_address_counter.items():
-            percentage = 100 * occurences / counter_sum  # Get percentage
+        for address, occurrences in ip_address_counter.items():
+            percentage = 100 * occurrences / counter_sum  # Get percentage
             ips_with_percentages.append(
                 (address, percentage))  # Build a list of tuples
 
@@ -270,7 +281,6 @@ class ReaderWindow(tk.Frame):
                 pass
 
             current_output = ("{}: {:.2f}%\n".format(address, percentage))
-            # print(current_output)
             self.packet_field.insert(tk.END, str(current_output))
             self.packet_field.see(tk.END)
 
@@ -281,6 +291,8 @@ class ReaderWindow(tk.Frame):
         self.packet_field.insert(tk.END, str(composition))
         self.packet_field.see(tk.END)
         self.heading.config(text="File Reading Complete!")
+
+        self.enable_buttons()
 
     def socket_read(self, packet_list):
         # THREAD C
@@ -311,30 +323,31 @@ class ReaderWindow(tk.Frame):
         self.heading.config(text="[!] Socket Translation Concluded.")
         self.stop_button.config(state=tk.DISABLED)
 
+        self.enable_buttons()
+
     # Thread and packet_field management.
     def stop_reading_thread(self):
         # Called by "Stop Reading" button
         self.thread_stop.set()
 
-    def clear_packet_field(self):
-        self.packet_field.delete("1.0", tk.END)
+    # Button configuration functions
+    def disable_buttons(self):
+        # Disable tier buttons
+        self.select_file_btn.config(state=tk.DISABLED)
+        self.tier_one.config(state=tk.DISABLED)
+        self.tier_two.config(state=tk.DISABLED)
+        self.tier_three.config(state=tk.DISABLED)
 
-
-def set_protocol_count(file_name):
-    # Open the pcap file
-    pkts = rdpcap(file_name)
-    # Loop through each packet and count the number of TCP, UDP, and ICMP packets
-    for packet in pkts:
-        if packet.haslayer(TCP):
-            global_parse_vars.tcp_count += 1
-        elif packet.haslayer(UDP):
-            global_parse_vars.udp_count += 1
-        elif packet.haslayer(ICMP):
-            global_parse_vars.icmp_count += 1
+    def enable_buttons(self):
+        # Disable tier buttons
+        self.select_file_btn.config(state=tk.NORMAL)
+        self.tier_one.config(state=tk.NORMAL)
+        self.tier_two.config(state=tk.NORMAL)
+        self.tier_three.config(state=tk.NORMAL)
 
 
 def is_private_ip(ip):
-    # Utilised in public_private_composition()
+    # Utilized in public_private_composition()
     try:
         ip_addr = ipaddress.ip_address(ip)
     except ValueError:
@@ -425,7 +438,7 @@ def public_private_composition(pcap_file):
 
 
 def socket_translator(packet):
-    # Resolve IP addresses from a packet to their respective hostnames.
+    # Resolve IP addresses from a packet to their respective host names.
 
     # Extract relevant data from packet
     if IP in packet:
@@ -443,7 +456,7 @@ def socket_translator(packet):
     dst_attempted_resolve = resolve_ip(dst)
 
     if src != "??" or dst != "??":
-        return f"{src_attempted_resolve} -> {dst_attempted_resolve}"
+        return f"{src_attempted_resolve}   -->   {dst_attempted_resolve}"
 
 
 def resolve_ip(ip_address):
@@ -465,3 +478,44 @@ def resolve_ip(ip_address):
         except socket.error:
             global_parse_vars.unknown_ips.add(ip_address)
             return ip_address
+
+
+def protocol_analysis(packet_list):
+
+    protocol_counter = Counter()
+    result = ""
+
+    if packet_list:
+        # Loop through each packet in the list
+        for packet in packet_list:
+            try:
+                # Check the protocol of the packet
+                if packet.haslayer(scapy.layers.http.HTTP):
+                    protocol_counter['HTTP'] += 1
+                elif packet.haslayer(scapy.layers.dns.DNS):
+                    protocol_counter['DNS'] += 1
+                elif packet.haslayer(scapy.layers.inet.TCP):
+                    protocol_counter['TCP'] += 1
+                elif packet.haslayer(scapy.layers.inet.UDP):
+                    protocol_counter['UDP'] += 1
+            except:
+                # Ignore any packets that cannot be checked for layers
+                continue
+
+        # Build the result string
+        for protocol, count in protocol_counter.items():
+            result += f"\nFound {count} [{protocol}] occurrences"
+
+        # Check if any of the four protocols exist in the Counter
+        if 'HTTP' in protocol_counter:
+            result += ("\n\nHTTP is the protocol that allows communication between web servers and web browsers.")
+        if 'DNS' in protocol_counter:
+            result += ("\n\nDNS is like a phone book for the internet. When you type a website address into your browser, such as 'www.google.com,' your computer needs to know the IP address (a unique numerical identifier) of the server that hosts that website")
+        if 'TCP' in protocol_counter:
+            result += ("\n\nTCP is responsible for making sure those packets are delivered in the correct order, without errors, and without being lost or duplicated.")
+        if 'UDP' in protocol_counter:
+            result += ("\n\nUDP is often used for applications that require real-time, low-latency communication, such as video streaming or online gaming.")
+    else:
+        result = "Protocol_analysis() packet list was empty."
+
+    return result

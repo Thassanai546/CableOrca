@@ -13,11 +13,11 @@ from net_speed_test import get_speed_mbs
 from pcap_parser import public_private_composition, search_org
 
 # Questions that the wizard asks the user
-questions = ["Question [1/5] Would you like me to see if I can connect to the internet?",
-             "Question [2/5] Would you like me to try and measure the current network speed? If you click yes, please keep in mind that the application will need approximately 20 seconds to run the internet speedtest in the background",
-             "Question [3/5] Would you like me to try and discover the names of devices on the network?",
-             "Question [4/5] Would you be interested in capturing and analyzing the network traffic on your computer network?",
-             "Last but not least, would you like me to analyse an existing network capture file? I can read .pcap files."]
+questions = ["Question [1/5]\nWould you like me to see if I can connect to the internet?\nIf possible, I will also try to list all other available Wi-Fi networks.",
+             "Question [2/5]\nWould you like me to try and measure the current network speed? If you click yes, please keep in mind that the application will need approximately 20 seconds to run the internet speedtest in the background",
+             "Question [3/5]\nWould you like me to try and discover the names of devices on the network?",
+             "Question [4/5]\nWould you be interested in capturing and analyzing the network traffic on your computer network?",
+             "Question [5/5]\nLast but not least, would you like me to analyze an existing network capture file? I can read .pcap files."]
 
 
 class WizardTelemetry():
@@ -28,11 +28,17 @@ class WizardTelemetry():
     pcap_pkt_list = []
 
     # A list of tuples where an entry may look like
-    # (TWITCH, 29) Where Twtich makes up 29% of a .pcap files traffic
+    # (TWITCH, 29) Where Twitch makes up 29% of a .pcap files traffic
     sorted_percentages = []
 
     # Composition Read
     ip_counter = Counter()
+
+    # Discovered devices
+    discovered_devices = ""
+
+    # Speed test result
+    speedtest_results = ""
 
     def reset(self):
         self.answers = []
@@ -47,7 +53,7 @@ class DiagnosticWizard(tk.Frame):
         super().__init__(parent)
 
         self.pack()
-        self.current_question = 0
+        self.current_q_number = 0
         self.create_widgets()
 
         # Reset diagnostic data
@@ -82,29 +88,46 @@ class DiagnosticWizard(tk.Frame):
 
     def next_question_btn_clicked(self):
         # Called by "Next Question" button
-        self.current_question += 1
+        self.current_q_number += 1
 
         # For each new question, enable the choice buttons.
         self.yes_button.config(state=tk.NORMAL)
         self.no_button.config(state=tk.NORMAL)
         self.next_button.config(state=tk.DISABLED)
 
-        if self.current_question < len(questions):
+        if self.current_q_number < len(questions):
             self.display_question()
         else:
-            # Testing
-            print(wzrd_telemetry.answers)
-            print(wzrd_telemetry.called_functions)
+            # Reached end of wizard questions
 
-            # RESET WINDOW
-            self.master.destroy()
+            # Forget buttons
+            self.next_button.pack_forget()
+            self.yes_button.pack_forget()
+            self.no_button.pack_forget()
+
+            GOODBYE_MESSAGE = "Alright, please visit again if you have any more questions!\n\nSummary:"
+
+            self.question_text.config(state=tk.NORMAL)
+            self.question_text.delete("1.0", tk.END)
+            self.question_text.insert(tk.END, GOODBYE_MESSAGE)
+
+            output_string = ''
+            if wzrd_telemetry.speedtest_results:
+                output_string += f'\n\n{wzrd_telemetry.speedtest_results}'
+            if wzrd_telemetry.discovered_devices:
+                output_string += f'\n\n{wzrd_telemetry.discovered_devices}'
+
+            if output_string:
+                self.question_text.insert(tk.END, output_string)
+
+            self.question_text.config(state=tk.DISABLED)
 
     def display_question(self):
         # Display current question in the text area
         self.question_text.config(state=tk.NORMAL)  # state change
 
         self.question_text.delete("1.0", tk.END)
-        self.question_text.insert(tk.END, questions[self.current_question])
+        self.question_text.insert(tk.END, questions[self.current_q_number])
 
         self.question_text.config(state=tk.DISABLED)  # state change
 
@@ -186,7 +209,7 @@ class DiagnosticWizard(tk.Frame):
             self.question_text.delete("1.0", tk.END)
             self.question_text.insert(tk.END, msg)
 
-            # Confugre confirm button
+            # Configure confirm button
             self.confirm.config(state=tk.NORMAL)
         except:
             # User has not selected a file in file explorer OR file is empty
@@ -221,7 +244,7 @@ class DiagnosticWizard(tk.Frame):
 
         counter_sum = sum(wzrd_telemetry.ip_counter.values())
 
-        # Counter contains ip addresses and their occurences
+        # Counter contains ip addresses and their occurrences
         # This list will contain tuples with ip addresses and their percentages.
         ips_with_percentages = []
 
@@ -257,7 +280,7 @@ class DiagnosticWizard(tk.Frame):
             self.question_text.see(tk.END)
 
         # Calculate public and private address composition
-        # Retruns a message string to be displayed to user
+        # Returns a message string to be displayed to user
         composition = public_private_composition(
             wzrd_telemetry.pcap_file_name)
 
@@ -292,47 +315,44 @@ class DiagnosticWizard(tk.Frame):
     def protocol_analysis(self):
         self.further_button.config(state=tk.DISABLED)
 
-        packet_list = wzrd_telemetry.pcap_pkt_list
+        self.question_text.config(state=tk.NORMAL)  # state change
 
-        if packet_list:
-            protocol_counter = Counter()
+        # Message for user
+        self.question_text.insert(
+            tk.END, f"\n\nSure, I can attempt to look in to this file further: ")
+        self.question_text.see(tk.END)
 
-            # Loop through each packet in the list
-            for packet in packet_list:
-                # Check the protocol of the packet
-                if packet.haslayer(scapy.layers.http.HTTP):
-                    protocol_counter['HTTP'] += 1
-                elif packet.haslayer(scapy.layers.dns.DNS):
-                    protocol_counter['DNS'] += 1
-                elif packet.haslayer(scapy.layers.inet.TCP):
-                    protocol_counter['TCP'] += 1
-                elif packet.haslayer(scapy.layers.inet.UDP):
-                    protocol_counter['UDP'] += 1
+        # Attempt to perform protocol analysis
+        try:
+            from pcap_parser import protocol_analysis
 
-            self.question_text.config(state=tk.NORMAL)  # state change
-
-            # Print the results
+            result = protocol_analysis(wzrd_telemetry.pcap_pkt_list)
+        except:
+            # Error occurred while performing protocol analysis
             self.question_text.insert(
-                tk.END, f"\n\nSure, I can look into this file further. I have listed the following protocols along with their occurences: ")
+                tk.END, "\n\nError: Unable to perform protocol analysis.")
+            self.question_text.config(state=tk.DISABLED)
+            self.further_button.config(state=tk.NORMAL)
+            return
 
-            for protocol, count in protocol_counter.items():
-                # print(f"{protocol}: {count}")
-                self.question_text.insert(tk.END, f"\n{protocol}: {count}")
-
-            self.question_text.see(tk.END)
-            self.question_text.config(state=tk.DISABLED)  # state change
+        # Display results to user
+        if result:
+            self.question_text.insert(
+                tk.END, f"\n\nProtocol Analysis Results:{result}")
         else:
-            self.question_text.config(state=tk.NORMAL)  # state change
             self.question_text.insert(
-                tk.END, f"\n\nI could not identify any protocls in this packet capture file at this time.")
-            self.question_text.config(state=tk.DISABLED)  # state change
+                tk.END, "\n\nNo protocols were identified in this packet capture file.")
+
+        self.question_text.see(tk.END)  # Auto scrolling for the user
+        self.question_text.config(state=tk.DISABLED)  # state change
+        self.further_button.config(state=tk.NORMAL)
 
     def check_list(self, lst):
         """
         As the user answers yes or no, a list of 1's and 0's is built
         The number of answers specifies what question the user is currently on
         and the 1 or 0 specifies their answer to that question
-        we only execute functions that the user specifes yes (1) to.
+        we only execute functions that the user specifies yes (1) to.
         """
         size = len(lst)
         print("size = " + str(size))
@@ -393,7 +413,20 @@ def wizard_check_internet():
     if check_internet():
         msg = "It looks like internet connection is up and running."
     else:
-        msg = "There are several possible reasons why your device may not have internet connection:\n\n1. Network issues: Your device may not be connected to a network, or the network you're connected to may be experiencing issues.\n\n2. Router issues: Your router may be malfunctioning, or it may not be properly set up.\n\n3. Software issues: Your device's software may be outdated or may be experiencing compatibility issues with your network or router.\n\n4. Account issues: Your internet service provider (ISP) may have suspended your account or there may be an issue with your payment.\n\n5. Physical damage: Your device's hardware may be damaged or broken, which can affect its ability to connect to the internet.\n\nPlease check these possibilities to troubleshoot the issue and restore your internet connection."
+        msg = "There are several possible reasons why your device may not have internet connection:\n\n1. Network issues: Your device may not be connected to a network, or the network you're connected to may be experiencing issues.\n\n2. Router issues: Your router may be malfunctioning, or it may not be properly set up.\n\n3. Software issues: Your device's software may be outdated or may be experiencing compatibility issues with your network or router.\n\n4. Account issues: Your internet service provider (ISP) may have suspended your account or there may be an issue with your payment.\n\n5. Physical damage: Your device's hardware may be damaged or broken, which can affect its ability to connect to the internet.\n\nPlease check these possibilities to troubleshoot the issue and restore your internet connection.\n\n"
+
+    from net_interfaces import get_wifi_networks
+
+    network_list = get_wifi_networks()
+
+    if network_list:
+        msg += "\n\nI was able to find these wireless networks:\n\n"
+        for network in network_list:
+            # I found that subprocess can return "" on unidentified networks
+            if network != "":
+                msg += network + '\n'
+    else:
+        msg += "\n\nI could not find other wireless networks. This might happen for different reasons, but one possibility is that your device doesn't have the necessary hardware or software to detect wireless networks."
 
     return msg
 
@@ -402,6 +435,7 @@ def wizard_check_speed():
     # DEF 2
     url, speed_result = get_speed_mbs()
     if speed_result:
+        wzrd_telemetry.speedtest_results = speed_result
         return "I have tested your internet speed! Scroll down for more information.\n" + speed_result + "\nYou can view some more details about your speed test here:" + url
     else:
         return "Sorry, I could not get a speed test at this time. Please try again!"
@@ -418,8 +452,11 @@ def wizard_device_discover():
         for entry in manufacturer:
             printable_result += f"{entry}\n"
 
+        wzrd_telemetry.discovered_devices = printable_result
         return printable_result
     else:
+        wzrd_telemetry.discovered_devices = "Could not find devices at this time."
+
         printable_result = "Sorry, I could not find any devices on this network at this current time. This could be due to several reasons:\n"
         printable_result += "- There may not be any devices currently connected to the network.\n"
         printable_result += "- The network may be configured to hide device information.\n"
@@ -440,7 +477,7 @@ def wizard_analysis():
         result += "\n\nIf you're not sure which interface to use, I recommend selecting: {}.\nThis is your default interface, and likely the one you are using to connect to the network/internet.".format(
             default_iface)
         result += "\n\nYou have the option to capture all traffic on your network, not just the traffic from your current device. To do this, simply select 'All Interfaces' in the configure scan section. "
-        result += "\n\nClick 'Next Question' if you would like to analyse an existing capture file."
+        result += "\n\nClick 'Next Question' if you would like to analyze an existing capture file."
         return result
 
     except Exception as e:
@@ -451,7 +488,7 @@ def wizard_analysis():
 
 def build_report():
     """
-    build_report does not take arguments, instead it utilises the wizards
+    build_report does not take arguments, instead it utilizes the wizards
     global variables.
     """
 
@@ -464,6 +501,7 @@ def build_report():
     I use it here as CableOrca creates images when saving graphs
     The CLI would freeze when not using this backend.
     """
+
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt

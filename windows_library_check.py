@@ -13,7 +13,7 @@ Npcap is recommended.
 def check_dll(dll_name):
     try:
         #  According to https://npcap.com/guide/npcap-api.html , the Npcap API is exported by wpcap.dll"
-        ctypes.WinDLL(dll_name) # wpcap.dll
+        ctypes.WinDLL(dll_name)  # wpcap.dll
         has_library = True
         print("Npcap/Winpcap detected!")
     except OSError:

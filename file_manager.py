@@ -88,7 +88,7 @@ def open_pcap():
 
 
 def append(filename, pkts):
-    # Filename excpected to include specified directory.
+    # Filename expected to include specified directory.
     try:
         if os.path.exists(filename):
             wrpcap(filename, pkts, append=True)
@@ -136,7 +136,7 @@ def save_image(url):
     This function is different to download_to_cableorca due to the fact that
     It allows a user to choose the destination of the image downloaded.
 
-    Used when saving images from speedtest
+    Used when saving images from speed test
 
     Returns True or False.
     """
