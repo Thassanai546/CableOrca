@@ -432,27 +432,7 @@ class Window5(tk.Frame):
         super().__init__(parent)
 
         # Network Speed Test
-
-        def on_start_button_click():
-            speed_test_output.config(state=tk.NORMAL)
-            speed_test_output.delete("1.0", tk.END)
-
-            self.url, self.result = get_speed_mbs()
-            speed_test_output.insert('end', self.result)
-            speed_test_output.config(state=tk.DISABLED)
-
-            # Enable save button now that we have results
-            save_button.config(state=tk.NORMAL)
-
-        def save_btn_clicked():
-            # call file_managery.py save image function
-            result = save_image(self.url)
-            if result:
-                save_status.config(text="Speed Test Results Saved!")
-            else:
-                save_status.config(text="Speed Test Results Not Saved")
-
-        self.url = ""
+        self.speed_test_url = ""
         self.result = ""
         speed_test_font = "Calibri"
 
@@ -466,12 +446,13 @@ class Window5(tk.Frame):
             speed_test_font, 14))
         message_label.pack()
 
-        # Display current device hostname
+        # Display current device hostname and interface
         device_name = global_details.device_info[1]
         int_details = global_details.device_info[2]
 
         device_name = device_name + '\n' + int_details + '\n'
 
+        # Build and display label
         device_inf = tk.Label(
             self, text=device_name, font=(speed_test_font, 16))
         device_inf.pack()
@@ -499,29 +480,72 @@ class Window5(tk.Frame):
 
         # Configure speed_test_output window.
         # wrap="word" = prevent mid-word wrapping.
-        speed_test_output = tk.Text(self, height=10, width=60, wrap="word", font=(
+        self.speed_test_output = tk.Text(self, height=11, width=60, wrap="word", font=(
             speed_test_font, 16), padx=10, pady=10)
-        speed_test_output.pack(pady=4)
+        self.speed_test_output.pack(pady=4)
 
-        default_text = "Please refrain from interacting with the application for approximately 20 seconds while the network speed is being measured."
+        # Start speed test button, configured by "global_details.internet_con = check_internet()" check
+        self.start_test_btn = tk.Button(self, text="Start", width=15,
+                                        command=self.on_start_button_click, font=(speed_test_font, 12), bg="#58d68d")
+        self.start_test_btn.pack(pady=5)
 
-        speed_test_output.insert('end', default_text)
-        speed_test_output.config(state=tk.DISABLED)
+        # Save speed test results button, disabled by default
+        self.save_button = tk.Button(self, text="Save Results", width=15,
+                                     command=self.save_btn_clicked, font=(speed_test_font, 12))
+        self.save_button.pack(pady=5)
+        self.save_button.config(state=tk.DISABLED)
 
-        # Button to start network speed test
-        tk.Button(self, text="Start", width=15,
-                  command=on_start_button_click, font=(speed_test_font, 12), bg="#58d68d").pack(pady=5)
+        # Save status message which appears under "save" button
+        self.save_status = tk.Label(self, justify="left", text="", font=(
+            speed_test_font, 16))
+        self.save_status.pack(pady=5)
 
-        # Button to save results of network speed test
-        save_button = tk.Button(self, text="Save Results", width=15,
-                                command=save_btn_clicked, font=(speed_test_font, 12))
-        save_button.pack(pady=5)
-        save_button.config(state=tk.DISABLED)
+        # Check internet connection status before enabling the start button
+        global_details.internet_con = check_internet()
+        if global_details.internet_con:
+            default_text = "Please refrain from interacting with the application for approximately 20 seconds while the network speed is being measured."
+            self.start_test_btn.config(state=tk.NORMAL)
+        else:
+            default_text = "Internet connection could not be established at this time. Please check your internet connection and then reload this window."
+            self.start_test_btn.config(state=tk.DISABLED)
 
-        # Save status message
-        save_status = tk.Label(self, justify="left", text="", font=(
-            speed_test_font, 14))
-        save_status.pack()
+        # Display internet connection status
+        self.speed_test_output.insert('end', default_text)
+        self.speed_test_output.config(state=tk.DISABLED)
+
+    def on_start_button_click(self):
+        # Calling speed test function
+        self.speed_test_output.config(state=tk.NORMAL)
+        self.speed_test_output.delete("1.0", tk.END)
+
+        try:
+            self.speed_test_url, self.result = get_speed_mbs()
+            self.speed_test_output.insert('end', self.result)
+
+            msg = "\nSpeed Test Results URL:\n" + self.speed_test_url
+            self.speed_test_output.insert('end', msg)
+
+            # Enable save button now that results were fetched
+            self.save_button.config(state=tk.NORMAL)
+        except:
+            error_msg = "Failed to get internet speed at this current time. Please check your internet connection and try again."
+            self.speed_test_output.insert('end', error_msg)
+            # Disable save button if results could not be fetched
+            self.save_button.config(state=tk.DISABLED)
+
+        self.speed_test_output.config(state=tk.DISABLED)
+
+    def save_btn_clicked(self):
+        # call file_manager.py save image function
+        result = save_image(self.speed_test_url)
+        save_status = ""
+
+        if result:
+            save_status = "Speed test results were saved!"
+        else:
+            save_status = "Speed test results were not saved"
+
+        self.save_status.config(text=save_status)
 
 
 class Window6(tk.Frame):

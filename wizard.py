@@ -503,7 +503,7 @@ def build_report():
     """
 
     import matplotlib
-    matplotlib.use('Agg')
+    matplotlib.use('Agg')  # Matplotlib Mode
     import matplotlib.pyplot as plt
 
     sorted_percentages = wzrd_telemetry.sorted_percentages

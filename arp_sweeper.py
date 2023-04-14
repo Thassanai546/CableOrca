@@ -35,13 +35,13 @@ def arp_discovery():
 
         # Create an ARP request packet
         arp = ARP(pdst=ipv4_network)
-        ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+        ether = Ether(dst="ff:ff:ff:ff:ff:ff") # All devices on the network
         orca_packet = ether/arp
 
         # Record the start time
         start_time = time.time()
 
-        # Send the packet on the network and get the response
+        # Send the packet with a 3 second timeout
         result = srp(orca_packet, timeout=3, verbose=0)[0]
 
         lookup = MacLookup()    # MacLookup object for resolving mac address names

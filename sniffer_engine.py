@@ -1,3 +1,4 @@
+from pcap_parser import is_private_ip
 from scapy.all import *
 from scapy.all import IP, TCP, UDP
 import tkinter as tk
@@ -157,13 +158,10 @@ class SnifferWindow(tk.Frame):
             self.packet_field.update_idletasks()
             self.packet_field.see('end')
 
-
 # Packet parsing and output formats.
 
+
 def clean(packet):
-
-    from pcap_parser import is_private_ip
-
     """
     Takes a packet and returns a user-friendly summary of that packet as a string,
     including whether the packet is from the Internet or from the local network.
@@ -180,11 +178,22 @@ def clean(packet):
 
         pkt_summary += "Source IP: " + str(packet[IP].src) + "\n"
         pkt_summary += "Destination IP: " + str(packet[IP].dst) + "\n"
-        pkt_summary += "Protocol: " + str(packet[IP].proto) + "\n"
+        proto_num = packet[IP].proto
+
+        # Map the protocol number to its name
+        # https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
+        if proto_num == 6:
+            proto_name = "TCP"
+        elif proto_num == 17:
+            proto_name = "UDP"
+        else:
+            proto_name = str(proto_num)
+
+        pkt_summary += "Protocol: " + proto_name + "\n"
     else:
         pkt_summary += "Packet is not an IP packet.\n"
 
-    # Check if the packet is a TCP packet
+    # Check if the packet is a TCP or UDP packet
     if TCP in packet:
         pkt_summary += "Source Port: " + str(packet[TCP].sport) + "\n"
         pkt_summary += "Destination Port: " + str(packet[TCP].dport) + "\n"
