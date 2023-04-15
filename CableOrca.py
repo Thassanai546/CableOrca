@@ -82,25 +82,25 @@ class MainWindow(tk.Tk):
 
         # Create and pack buttons for sidebar
         # Buttons have been placed in order according to network diagnostic steps!
-        sidebbar_font = "Calibri"
+        side_bar_font = "Calibri"
 
         self.button1 = tk.Button(
-            self.sidebar, width=17, text="Home", command=lambda: self.change_window(Window1), font=(sidebbar_font, 12))
+            self.sidebar, width=17, text="Home", command=lambda: self.change_window(Window1), font=(side_bar_font, 12))
         self.button1.pack(padx=5, pady=3)
         self.button5 = tk.Button(
-            self.sidebar, width=17, text="Network Speed Test", command=lambda: self.change_window(Window5), font=(sidebbar_font, 12))
+            self.sidebar, width=17, text="Network Speed Test", command=lambda: self.change_window(Window5), font=(side_bar_font, 12))
         self.button5.pack(padx=5, pady=3)
         self.button3 = tk.Button(
-            self.sidebar, width=17, text="Discover Devices", command=lambda: self.change_window(Window3), font=(sidebbar_font, 12))
+            self.sidebar, width=17, text="Discover Devices", command=lambda: self.change_window(Window3), font=(side_bar_font, 12))
         self.button3.pack(padx=5, pady=3)
         self.button2 = tk.Button(
-            self.sidebar, width=17, text="Configure Scan", command=lambda: self.change_window(Window2), font=(sidebbar_font, 12))
+            self.sidebar, width=17, text="Configure Scan", command=lambda: self.change_window(Window2), font=(side_bar_font, 12))
         self.button2.pack(padx=5, pady=3)
         self.button4 = tk.Button(
-            self.sidebar, width=17, text="Analyse .pcap File", command=lambda: self.change_window(Window4), font=(sidebbar_font, 12))
+            self.sidebar, width=17, text="Analyse .pcap File", command=lambda: self.change_window(Window4), font=(side_bar_font, 12))
         self.button4.pack(padx=5, pady=3)
         self.button6 = tk.Button(
-            self.sidebar, width=17, text="Wizard", command=lambda: self.change_window(Window6), font=(sidebbar_font, 12))
+            self.sidebar, width=17, text="Wizard", command=lambda: self.change_window(Window6), font=(side_bar_font, 12))
         self.button6.pack(padx=5, pady=3)
 
         # Create main window container
@@ -168,7 +168,7 @@ class Window1(tk.Frame):
                      justify="left", font=(home_font, 16), pady=5, padx=5).pack(pady=5)
 
         """
-        Try to search for pcap library on Windows.
+        Try to search for packet capture library on Windows.
         If it is not found, links npcap download page.
         Note! It is important to leave space on the homepage for this warning!
         """
@@ -289,10 +289,12 @@ class Window2(tk.Frame):
             self, font=(scanner_font, 12), text="Start Scan", width=15, command=self.confirm_sniff, state=tk.DISABLED, pady=1, bg="#5fe884")
         self.confirm_button.pack(pady=10)
 
-    # Developer note:
-    # These methods need to be separate from __init__ because they are not
-    # called when the object is created, but after the user has interacted
-    # with the window.
+    '''
+    Developer note:
+    These methods need to be separate from __init__ because they are not
+    called when the object is created, but after the user has interacted
+    with the window.
+    '''
 
     def update_interface_display(self, *args):
         # selected = current value of the selected interface
@@ -401,7 +403,7 @@ class Window3(tk.Frame):
 
         # Text Area for output of arp sweep results
         arp_text_output = tk.Text(
-            self, height=20, width=90, wrap="word", font=(dev_discover_font, 14), pady=15, padx=15)  # wrap="word" = prevent mid-word wrapping.
+            self, height=20, width=98, wrap="word", font=(dev_discover_font, 14), pady=15, padx=15)  # wrap="word" = prevent mid-word wrapping.
         arp_text_message = "An ARP request is a type of network packet used to determine the MAC address of a device on the local network. It works by broadcasting a request to all devices on the network, asking the device with a specific IP address to respond with its MAC address. CableOrca will use these ARP requests to discover devices."
         arp_text_output.insert(tk.END, arp_text_message)
         arp_text_output.config(bg="#e9eaeb", state="disabled")
@@ -419,7 +421,7 @@ class Window4(tk.Frame):
         super().__init__(parent)
         # Read a .pcap file
 
-        # Persistant window, displayed before reading starts.
+        # Persistent window, displayed before reading starts.
         try:
             # This spawns a text area.
             ReaderWindow(self)

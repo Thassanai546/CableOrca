@@ -35,7 +35,7 @@ def arp_discovery():
 
         # Create an ARP request packet
         arp = ARP(pdst=ipv4_network)
-        ether = Ether(dst="ff:ff:ff:ff:ff:ff") # All devices on the network
+        ether = Ether(dst="ff:ff:ff:ff:ff:ff")  # All devices on the network
         orca_packet = ether/arp
 
         # Record the start time
@@ -50,8 +50,8 @@ def arp_discovery():
         # Add current date to output
         current_time = datetime.now()
 
-        output = "<======= Device Discovery Sweep Date: " + \
-            str(current_time) + " =======>\n"
+        # Add result header
+        output = f"<======= Device Discovery Sweep Date: {current_time} =======>\n"
 
         for sent, received in result:
             try:
@@ -59,23 +59,18 @@ def arp_discovery():
                 mac_address = received.hwsrc
                 ip_address = str(received.psrc)
                 manufacturer = lookup.lookup(mac_address)
-                output += "MAC: " + mac_address + "\tIP: " + \
-                    ip_address.ljust(18) + "\tManufacturer: " + \
-                    manufacturer + "\n"
+                output += f"MAC: {mac_address}\tIP: {ip_address.ljust(18)}\tManufacturer: {manufacturer}\n"
             except:
-                output += "MAC: " + mac_address + "\tIP: " + \
-                    ip_address.ljust(
-                        18) + "\tManufacturer: Not Found." + "\n"
+                output += f"MAC: {mac_address}\tIP: {ip_address.ljust(18)}\tManufacturer: Not Found.\n"
 
         end_time = time.time()
         total_time = end_time - start_time
         total_time = round(total_time)
 
-        output += "<=== Analysis completed in " + \
-            str(total_time) + " seconds. The Network Scanned: " + \
-            ipv4_network + " ===>"
+        # Add result footer
+        output += f"<=== Analysis completed in {total_time} seconds. The Network Scanned: {ipv4_network} ===>"
 
-        print("Scan Complete.", total_time, "seconds.")
+        print(f"Scan Complete. {total_time:.2f} seconds.")
         return output
     except Exception as ex:
         print(ex)

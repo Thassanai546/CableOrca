@@ -15,6 +15,13 @@ def interfaces_to_name_list():
 
 def get_current_device():
     # Get hostname and ip address
+
+    '''
+    [0] Device IP
+    [1] Device Name
+    [2] Device Default Interface
+    '''
+    
     output = []
     try:
         device_interface = conf.iface.name

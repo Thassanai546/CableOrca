@@ -31,6 +31,9 @@ class WizardTelemetry():
     # (TWITCH, 29) Where Twitch makes up 29% of a .pcap files traffic
     sorted_percentages = []
 
+    # List of wireless networks
+    wireless_networks = []
+
     # Composition Read
     ip_counter = Counter()
 
@@ -98,27 +101,71 @@ class DiagnosticWizard(tk.Frame):
         if self.current_q_number < len(questions):
             self.display_question()
         else:
-            # Reached end of wizard questions
+            '''
+            Reached end of wizard questions
+            Display summary if information was gathered
+            '''
 
             # Forget buttons
             self.next_button.pack_forget()
             self.yes_button.pack_forget()
             self.no_button.pack_forget()
 
-            GOODBYE_MESSAGE = "Alright, please visit again if you have any more questions!\n\n"
+            GOODBYE_MESSAGE = "Alright, please visit again if you have any more questions!\n"
 
             self.question_text.config(state=tk.NORMAL)
             self.question_text.delete("1.0", tk.END)
             self.question_text.insert(tk.END, GOODBYE_MESSAGE)
 
             output_string = ''
-            if wzrd_telemetry.speedtest_results:
-                output_string += f'\n\n{wzrd_telemetry.speedtest_results}'
-            if wzrd_telemetry.discovered_devices:
-                output_string += f'\n\n{wzrd_telemetry.discovered_devices}'
 
+            # 1) Check for wireless device list
+            if wzrd_telemetry.wireless_networks:
+
+                output_string += f'\n\n <==== Wireless Networks I Could See====>\n'
+                for network in wzrd_telemetry.wireless_networks:
+                    if network != "":
+                        output_string += network + '\n'
+
+            # 2) Check for speed test results
+            if wzrd_telemetry.speedtest_results:
+                output_string += f'\n\n<==== Speed Test ====>\n{wzrd_telemetry.speedtest_results}'
+
+            # 3) Check for discovered devices
+            if wzrd_telemetry.discovered_devices:
+                output_string += f'\n\n<==== Device Discovery ====>\n{wzrd_telemetry.discovered_devices}'
+
+            # If any of the three outputs were created, display on text field
             if output_string:
+                from net_interfaces import get_current_device
+                from file_manager import save_txt_file
+                import datetime
+
+                current_device = get_current_device()
+
+                output_string += '\n<==== Device Information ====>\n'
+                for entry in current_device:
+                    output_string += entry + '\n'
+
+                # Get the current date and time
+                now = datetime.datetime.now()
+
+                # Format the date and time as a string
+                formatted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+
+                # Print the formatted date and time
+                timestamp = f"Date:{formatted_date}"
+
+                # Place timestamp at start
+                output_string = timestamp + output_string
+
+                # Insert report to text area
                 self.question_text.insert(tk.END, output_string)
+
+                # Create a button that allows output saving
+                self.save_btn = tk.Button(self, font=("Calibri", 12), text="Save Info", command=lambda: save_txt_file(
+                    output_string), width=15, pady=1, bg='#4CAF50', fg='white')
+                self.save_btn.pack(side="left", pady=5, padx=3)
 
             self.question_text.config(state=tk.DISABLED)
 
@@ -174,7 +221,10 @@ class DiagnosticWizard(tk.Frame):
         Create or configure buttons depending on whether they exist or not
         hasattr returns true or false, checking if an object exists or not
 
-        Buttons created: 1) Confirm 2) Further Analysis 3) Generate Report
+        Buttons created: 
+        1) Confirm 
+        2) Further Analysis 
+        3) Generate Report
         """
         if hasattr(self, "confirm"):
             self.confirm.config(state=tk.DISABLED)
@@ -248,8 +298,8 @@ class DiagnosticWizard(tk.Frame):
         # This list will contain tuples with ip addresses and their percentages.
         ips_with_percentages = []
 
-        for address, occurences in wzrd_telemetry.ip_counter.items():
-            percentage = 100 * occurences / counter_sum  # Get percentage
+        for address, occurrences in wzrd_telemetry.ip_counter.items():
+            percentage = 100 * occurrences / counter_sum  # Get percentage
             ips_with_percentages.append(
                 (address, percentage))  # Build a list of tuples
 
@@ -355,7 +405,6 @@ class DiagnosticWizard(tk.Frame):
         we only execute functions that the user specifies yes (1) to.
         """
         size = len(lst)
-        print("size = " + str(size))
 
         for i in range(size):
             # if user selected "yes"
@@ -417,6 +466,8 @@ def wizard_check_internet():
 
     from net_interfaces import get_wifi_networks
 
+    # Create list of wireless networks
+    # Returns empty if none can be found
     network_list = get_wifi_networks()
 
     if network_list:
@@ -425,6 +476,9 @@ def wizard_check_internet():
             # I found that subprocess can return "" on unidentified networks
             if network != "":
                 msg += network + '\n'
+
+        # Set globally accessed list
+        wzrd_telemetry.wireless_networks = network_list
     else:
         msg += "\n\nI could not find other wireless networks. This might happen for different reasons, but one possibility is that your device doesn't have the necessary hardware or software to detect wireless networks."
 
@@ -443,7 +497,10 @@ def wizard_check_speed():
 
 def wizard_device_discover():
     # DEF 3
+
+    # Takes a string and extracts only the manufacturer name from it
     manufacturer = re.findall(r'Manufacturer:\s+(.*?)\n', str(arp_discovery()))
+
     printable_result = ""
 
     if manufacturer:
@@ -503,7 +560,7 @@ def build_report():
     """
 
     import matplotlib
-    matplotlib.use('Agg')  # Matplotlib Mode
+    matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
     sorted_percentages = wzrd_telemetry.sorted_percentages
