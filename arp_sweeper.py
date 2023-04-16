@@ -8,11 +8,14 @@ import time
 def get_network(ip_address):
     # Takes an ip address as a string
     try:
-        # Get a network from an ip address.
-        # strict = False -> can accept network addresses and ip addresses.
-        # creates "class 'ipaddress.IPv4Network'"
+        """
+        Get a network from an ip address.
+        strict = False -> can accept network addresses and ip addresses.
+        creates "class 'ipaddress.IPv4Network'"
+        """
+
         network = ipaddress.ip_network(ip_address + '/24', strict=False)
-        print("Created network =", network)
+        print(f"Network address created: {network}")
         return network
     except Exception as ex:
         print("A network was not created by get_network()." + ex)
