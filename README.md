@@ -23,9 +23,11 @@ One of the key benefits of CableOrca is its simplicity. Unlike other tools that 
 ![image](https://user-images.githubusercontent.com/72495327/232320844-0935860c-0714-48a3-a67d-112d8c0d51aa.png)
 
 ## Instructions
-Windows user can download the .exe file.
+### Windows Users Can Download [CableOrca.exe](https://github.com/Thassanai546/CableOrca/blob/main/CableOrca_EXE/CableOrca.exe).
 
-<br>
+
+<br><br>
+<h4>Build from source code:</h4><br>
 
 Application was built with Pyinstaller
 1) `pip install pyinstaller`
