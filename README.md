@@ -31,11 +31,15 @@ One of the key benefits of CableOrca is its simplicity. Unlike other tools that 
 
 <h4>[!] Build from source code:</h4>
 
-+ The application was built with Pyinstaller
 1) Install Imports: `pip install -r requirements.txt`
 2) Install Pyinstaller: `pip install pyinstaller`
 3) Place "CableOrcaIco.ico" in the same directory as "CableOrca.py". The Run: `pyinstaller --onefile --icon=CableOrcaIco.ico CableOrca.py`
 4) Go to the "dist" directory to find the executable.
+
+<br>
+
++ The application was built with **Pyinstaller**
++ Run **"CableOrca.py"** in development environments.
 
 ##
 
