@@ -23,18 +23,17 @@ One of the key benefits of CableOrca is its simplicity. Unlike other tools that 
 ![image](https://user-images.githubusercontent.com/72495327/232320844-0935860c-0714-48a3-a67d-112d8c0d51aa.png)
 
 ## Instructions
-<h4> 
-  
-[!] Windows Users Can Download [CableOrca.exe](https://github.com/Thassanai546/CableOrca/blob/main/CableOrca_EXE/CableOrca.exe).
 
-</h4>
+**Windows Users Can Download the executable**\
+https://github.com/Thassanai546/CableOrca/blob/main/Executable.zip
 
-<h4>[!] Build from source code:</h4>
+<br>
+
+Or if you wish to build from **source code:**
 
 1) Install Imports: `pip install -r requirements.txt`
-2) Install Pyinstaller: `pip install pyinstaller`
-3) Place "CableOrcaIco.ico" in the same directory as "CableOrca.py". The Run: `pyinstaller --onefile --icon=CableOrcaIco.ico CableOrca.py`
-4) Go to the "dist" directory to find the executable.
+2) Get cx_Freeze -> `pip install cx_Freeze`
+3) Build with cx_Freeze -> `python setup.py build`
 
 <br>
 
