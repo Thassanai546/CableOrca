@@ -4,7 +4,7 @@
 
 Introducing a powerful tool that makes packet sniffing accessible to all users, regardless of their level of computing and networking expertise. CableOrca is designed to be like Wireshark for dummies - easy to use, yet incredibly powerful.
 <br><br>
-With CableOrca, you can monitor and analyze network traffic in real-time, allowing you to identify and troubleshoot network issues, and gain valuable insights into how your network is performing. 
+With CableOrca, you can monitor and analyze network traffic in real time, allowing you to identify and troubleshoot network issues, and gain valuable insights into how your network is performing. 
 <br><br>
 One of the key benefits of CableOrca is its simplicity. Unlike other tools that require extensive knowledge of networking protocols and packet structures, CableOrca provides a user-friendly interface that anyone can understand. With just a few clicks, you can start capturing and analyzing packets, and gain a deeper understanding of your network.
 
@@ -23,16 +23,19 @@ One of the key benefits of CableOrca is its simplicity. Unlike other tools that 
 ![image](https://user-images.githubusercontent.com/72495327/232320844-0935860c-0714-48a3-a67d-112d8c0d51aa.png)
 
 ## Instructions
-### Windows Users Can Download [CableOrca.exe](https://github.com/Thassanai546/CableOrca/blob/main/CableOrca_EXE/CableOrca.exe).
+<h4> 
+  
+[!] Windows Users Can Download [CableOrca.exe](https://github.com/Thassanai546/CableOrca/blob/main/CableOrca_EXE/CableOrca.exe).
 
-<br>
+</h4>
 
-<h4>Build from source code:</h4>
+<h4>[!] Build from source code:</h4>
 
-Application was built with Pyinstaller
-1) `pip install pyinstaller`
-2) When CableOrcaIco.ico is in the same directory as CableOrca.py\
-Run: `pyinstaller --onefile --icon=CableOrcaIco.ico CableOrca.py`
++ The application was built with Pyinstaller
+1) Install Imports: `pip install -r requirements.txt`
+2) Install Pyinstaller: `pip install pyinstaller`
+3) Place "CableOrcaIco.ico" in the same directory as "CableOrca.py". The Run: `pyinstaller --onefile --icon=CableOrcaIco.ico CableOrca.py`
+4) Go to the "dist" directory to find the executable.
 
 ##
 
