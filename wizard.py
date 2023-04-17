@@ -363,7 +363,6 @@ class DiagnosticWizard(tk.Frame):
         self.question_text.config(state=tk.DISABLED)  # state change
 
     def protocol_analysis(self):
-        self.further_button.config(state=tk.DISABLED)
 
         self.question_text.config(state=tk.NORMAL)  # state change
 
@@ -377,12 +376,12 @@ class DiagnosticWizard(tk.Frame):
             from pcap_parser import protocol_analysis
 
             result = protocol_analysis(wzrd_telemetry.pcap_pkt_list)
+            self.further_button.config(state=tk.DISABLED)
         except:
             # Error occurred while performing protocol analysis
             self.question_text.insert(
                 tk.END, "\n\nError: Unable to perform protocol analysis.")
             self.question_text.config(state=tk.DISABLED)
-            self.further_button.config(state=tk.NORMAL)
             return
 
         # Display results to user
@@ -395,7 +394,6 @@ class DiagnosticWizard(tk.Frame):
 
         self.question_text.see(tk.END)  # Auto scrolling for the user
         self.question_text.config(state=tk.DISABLED)  # state change
-        self.further_button.config(state=tk.NORMAL)
 
     def check_list(self, lst):
         """

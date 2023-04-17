@@ -141,7 +141,7 @@ class ReaderWindow(tk.Frame):
 
             # read_pcap uses rdpcap(file) and returns a list of packets.
             global_parse_vars.pcap_file_name, global_parse_vars.pcap_file_list = read_pcap()
-            print("Global variables set!")
+            print(".PCAP File Ready to Read!")
 
             # Change heading to file selected
             # Strip path, display only filename.
