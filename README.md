@@ -37,7 +37,6 @@ Or if you wish to build from **source code:**
 
 <br>
 
-+ The application was built with **Pyinstaller**
 + Run **"CableOrca.py"** in development environments.
 
 ##
