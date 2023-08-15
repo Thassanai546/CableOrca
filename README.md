@@ -13,7 +13,6 @@ One of the key benefits of CableOrca is its simplicity. Unlike other tools that 
 #
 
 <div align="centre">
-  <img src="http://ForTheBadge.com/images/badges/made-with-python.svg" height=30 />
   <img src="https://img.shields.io/badge/Visual_Studio_Code-0078D4?style=for-the-badge&logo=visual%20studio%20code&logoColor=white" height=30 />
   <img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" height=30 />
 </div>
@@ -41,4 +40,7 @@ Or if you wish to build from **source code:**
 
 ##
 
-Thassanai - 2023
+<img src="https://github.com/Thassanai546/CableOrca/assets/72495327/d88f023a-a5fb-4541-a2de-3416f1d03f6e" width=300>
+<h4>Thank you SunLife for allowing me to present CableOrca for the SunLife Academic Awards 2023.</h4>
+
+
