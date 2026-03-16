@@ -1,4 +1,6 @@
-# Final Year Project for Cybercrime &amp; IT Security - SETU
+# CableOrca, Because Wire Shark Was Taken
+
+### Final Year Project for Cybercrime &amp; IT Security - SETU
 
 <img src="https://user-images.githubusercontent.com/72495327/229295979-03595c54-0aa3-4a74-98b1-6abbc3c7b55b.png" width=320 align="right"/>
 
@@ -17,11 +19,11 @@ One of the key benefits of CableOrca is its simplicity. Unlike other tools that 
   <img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" height=30 />
 </div>
 
-## Requirements
+### Requirements
 
 ![image](https://user-images.githubusercontent.com/72495327/232320844-0935860c-0714-48a3-a67d-112d8c0d51aa.png)
 
-## Instructions
+### Instructions
 
 **Windows Users Can Download the executable**\
 https://github.com/Thassanai546/CableOrca/blob/main/Executable.zip
